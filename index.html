@@ -477,6 +477,22 @@
     .clear-keyword { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border:0; border-radius:50%; background:#fff1f1; color:var(--accent); font-weight:900; cursor:pointer; display:none; line-height:1; box-shadow:inset 0 0 0 1px rgba(230,0,18,.12); }
     .clear-keyword.visible { display:grid; place-items:center; }
     .thumb.detail-thumb { cursor:pointer; border:0; width:100%; }
+
+    /* v12 recommendation fixed genre picker + release selector */
+    .genre-condition-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .genre-pane { border:1px solid rgba(230,0,18,.14); background:#fffafa; border-radius:18px; padding:14px; box-shadow:0 10px 24px rgba(160,0,20,.05); }
+    .genre-pane h4 { margin:0 0 8px; font-size:15px; }
+    .genre-pane .hint { margin-bottom:10px; }
+    .genre-pane-search { width:100%; border:1px solid rgba(230,0,18,.16); background:#fff; border-radius:999px; padding:11px 14px; outline:none; margin-bottom:10px; }
+    .fixed-genre-box { max-height:270px; overflow:auto; border:1px solid rgba(230,0,18,.10); background:#fff; border-radius:14px; padding:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .fixed-genre-btn { border:1px solid rgba(230,0,18,.14); background:#fffafa; color:var(--text); border-radius:12px; padding:10px; font-weight:900; cursor:pointer; text-align:left; }
+    .fixed-genre-btn:hover { background:#fff1f1; }
+    .fixed-genre-btn.active.include { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; }
+    .fixed-genre-btn.active.exclude { color:#fff; background:#3a3a3a; border-color:transparent; }
+    .release-picker { width:100%; min-height:170px; border:1px solid rgba(230,0,18,.16); border-radius:14px; background:#fff; padding:8px; font-weight:800; color:var(--text); outline:none; }
+    .release-picker option { padding:8px; border-radius:8px; }
+    @media (max-width:760px){ .genre-condition-grid{ grid-template-columns:1fr; } .fixed-genre-box{ grid-template-columns:1fr; } }
+
     @media (max-width:760px){ .genre-option-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .keyword-wrap{ flex-direction:column; } }
     @media (max-width:460px){ .genre-option-grid{ grid-template-columns:1fr; } }
 
@@ -580,21 +596,36 @@
 
           <div class="subgrid">
             <div class="mini-box">
-              <h4>年代</h4>
-              <div class="button-row" data-spec="era">
-                <button class="pill" data-value="〜2015年">〜2015年</button>
-                <button class="pill" data-value="2016〜2020年">2016〜2020年</button>
-                <button class="pill" data-value="2021〜2025年">2021〜2025年</button>
-                <button class="pill" data-value="2026年〜">2026年〜</button>
-              </div>
+              <h4>発売日</h4>
+              <select id="releaseDateSelect" class="release-picker" size="6">
+                <option value="">すべて</option>
+                <option value="today">今日までの新着</option>
+                <option value="7days">直近7日</option>
+                <option value="30days">直近30日</option>
+                <option value="2026">2026年</option>
+                <option value="2025">2025年</option>
+                <option value="2024">2024年</option>
+                <option value="2023">2023年</option>
+                <option value="2022">2022年</option>
+                <option value="2021">2021年</option>
+                <option value="2020">2020年</option>
+                <option value="2019">2019年</option>
+                <option value="2018">2018年</option>
+                <option value="2017">2017年</option>
+                <option value="2016">2016年</option>
+                <option value="before2015">〜2015年</option>
+              </select>
             </div>
             <div class="mini-box">
               <h4>年齢</h4>
               <div class="button-row" data-spec="age">
                 <button class="pill" data-value="18歳 19歳">18〜19歳</button>
-                <button class="pill" data-value="20代">20代</button>
-                <button class="pill" data-value="30代">30代</button>
-                <button class="pill" data-value="40代以上">40代以上</button>
+                <button class="pill" data-value="20歳 21歳 22歳">20〜22歳</button>
+                <button class="pill" data-value="23歳 24歳 25歳">23〜25歳</button>
+                <button class="pill" data-value="26歳 27歳 28歳 29歳">26〜29歳</button>
+                <button class="pill" data-value="30歳 31歳 32歳 33歳 34歳">30〜34歳</button>
+                <button class="pill" data-value="35歳 36歳 37歳 38歳 39歳">35〜39歳</button>
+                <button class="pill" data-value="40代以上 40歳">40歳以上</button>
               </div>
             </div>
             <div class="mini-box">
@@ -621,15 +652,25 @@
           <div class="section-head">
             <div>
               <h2>3. ジャンル</h2>
-              <p class="hint">APIからジャンルを取得します。フォーマットで2D/VRを切り替えるとジャンルも切り替わります。</p>
+              <p class="hint">おすすめ検索は固定ジャンルから選択します。含めたいジャンルと除外したいジャンルを分けて指定できます。</p>
             </div>
-            <button class="secondary" id="reloadGenres">ジャンル再取得</button>
           </div>
-          <div id="selectedGenreChips" class="chips"></div>
-          <div class="genre-toolbar">
-            <input id="genreFilter" class="genre-search" placeholder="ジャンル名で絞り込み" />
+          <div class="genre-condition-grid">
+            <div class="genre-pane">
+              <h4>含めるジャンル</h4>
+              <p class="hint">選んだジャンルをすべて含む作品を優先します。</p>
+              <input id="includeGenreFilter" class="genre-pane-search" placeholder="含めるジャンルを検索" />
+              <div id="includeGenreChips" class="chips"></div>
+              <div id="includeGenreBox" class="fixed-genre-box"></div>
+            </div>
+            <div class="genre-pane">
+              <h4>除外するジャンル</h4>
+              <p class="hint">選んだジャンルを含む作品は表示しません。</p>
+              <input id="excludeGenreFilter" class="genre-pane-search" placeholder="除外するジャンルを検索" />
+              <div id="excludeGenreChips" class="chips"></div>
+              <div id="excludeGenreBox" class="fixed-genre-box"></div>
+            </div>
           </div>
-          <div id="genreArea" class="genre-groups"><div class="loading">ジャンル取得待ちです。</div></div>
         </div>
 
         <div class="section">
@@ -787,6 +828,7 @@
     let tags = new Set();
     let specs = {};
     let genreIds = new Set();
+    let excludeGenreIds = new Set();
     let makerTags = new Set();
     let allGenres2D = [];
     let allGenresVR = [];
@@ -803,13 +845,15 @@
     const makerList = ['SOD','MOODYZ','Madonna','イエローバナナ','プレステージ','S1','エスワン','IDEAPOCKET','専属','kawaii','E-BODY','Faleno','RUBY','V&R','マックスA','ムーディーズ','TMA','WANZ','KMP','ダスッ！','アリスJAPAN','DMMオリジナル','bibian','ナチュラルハイ'];
 
     const popularGenresBase = [
-      { id: '4025', name: '単体作品' }, { id: 'kw:複数', name: '複数' }, { id: '', name: '素人' },
+      { id: '4025', name: '単体作品' }, { id: 'kw:複数', name: '複数' }, { id: 'kw:素人', name: '素人' },
       { id: 'kw:デビュー作品', name: 'デビュー作品' }, { id: 'kw:デビュー作', name: 'デビュー作' }, { id: 'kw:企画', name: '企画' },
-      { id: '5001', name: '中出し' }, { id: '', name: '美少女' }, { id: '', name: '美女' },
-      { id: '', name: 'ギャル' }, { id: '', name: '人妻' }, { id: '', name: '熟女' },
-      { id: '', name: '巨乳' }, { id: '102', name: '美乳' }, { id: '', name: 'スレンダー' },
-      { id: '', name: '痴女' }, { id: '', name: 'NTR' }, { id: '', name: 'ハメ撮り' },
-      { id: '', name: '制服' }, { id: '', name: '水着' }, { id: '5063', name: '主観' },
+      { id: '5001', name: '中出し' }, { id: 'kw:美少女', name: '美少女' }, { id: 'kw:美女', name: '美女' },
+      { id: 'kw:ギャル', name: 'ギャル' }, { id: 'kw:人妻', name: '人妻' }, { id: 'kw:熟女', name: '熟女' },
+      { id: 'kw:巨乳', name: '巨乳' }, { id: '102', name: '美乳' }, { id: 'kw:スレンダー', name: 'スレンダー' },
+      { id: 'kw:痴女', name: '痴女' }, { id: 'kw:NTR', name: 'NTR' }, { id: 'kw:ハメ撮り', name: 'ハメ撮り' },
+      { id: 'kw:制服', name: '制服' }, { id: 'kw:水着', name: '水着' }, { id: '5063', name: '主観' },
+      { id: 'kw:ドラマ', name: 'ドラマ' }, { id: 'kw:ハーレム', name: 'ハーレム' }, { id: 'kw:先生', name: '先生' },
+      { id: 'kw:温泉', name: '温泉' }, { id: 'kw:メンエス', name: 'メンエス' }, { id: 'kw:ソープ', name: 'ソープ' },
       { id: '6793', name: 'VR専用' }, { id: '307935', name: '8KVR' }, { id: '6925', name: 'ハイクオリティVR' }
     ];
 
@@ -1137,8 +1181,9 @@
         renderSelectedChips();
       });
 
-      $('genreFilter').addEventListener('input', renderGenres);
-      $('reloadGenres').addEventListener('click', loadGenres);
+      if ($('includeGenreFilter')) $('includeGenreFilter').addEventListener('input', renderGenres);
+      if ($('excludeGenreFilter')) $('excludeGenreFilter').addEventListener('input', renderGenres);
+      if ($('releaseDateSelect')) $('releaseDateSelect').addEventListener('change', renderSelectedChips);
       $('recommendKeyword').addEventListener('input', renderSelectedChips);
       $('recommendSearch').addEventListener('click', () => loadRecommend());
       $('resetConditions').addEventListener('click', resetConditions);
@@ -1230,12 +1275,13 @@
 
     async function loadGenres() {
       if (!ensureConfig()) return;
-      allGenres2D = allGenres2D.length ? allGenres2D : fallbackGenres('2d');
-      allGenresVR = allGenresVR.length ? allGenresVR : fallbackGenres('vr');
+      allGenres2D = fallbackGenres('2d');
+      allGenresVR = fallbackGenres('vr');
       genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
       renderGenres();
       renderBrowseGenres();
-      $('genreArea').innerHTML = '<div class="loading">ジャンルを取得中...</div>';
+
+      // おすすめ検索側はジャンルAPI取得を使わない。作品を探す側だけ、取得できた場合に全ジャンルを足す。
       try {
         const g2d = await dmmGet('GenreSearch', { service: 'digital', floor: 'videoa' });
         allGenres2D = normalizeGenres(g2d);
@@ -1245,17 +1291,15 @@
           { id: '307935', name: '8KVR' },
           ...allGenres2D.filter(g => /VR|主観|天井|密着/.test(g.name))
         ];
-        allGenresVR = uniqueGenres(vrExtra);
+        allGenresVR = uniqueGenres([...fallbackGenres('vr'), ...vrExtra]);
         genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
-        renderGenres();
         renderBrowseGenres();
       } catch (err) {
+        // 取得できなくても固定ジャンルでそのまま使えるようにする
         allGenres2D = fallbackGenres('2d');
         allGenresVR = fallbackGenres('vr');
         genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
-        renderGenres();
         renderBrowseGenres();
-        $('genreArea').insertAdjacentHTML('afterbegin', `<div class="notice">ジャンルAPIの取得に失敗したため、固定の人気ジャンルを表示しています。</div>`);
       }
     }
 
@@ -1375,23 +1419,21 @@
       const popular = fallbacks.filter(g => !q || normalizeText(g.name).includes(q));
       const all = list.filter(g => !fallbacks.some(f => normalizeText(f.name) === normalizeText(g.name)))
         .filter(g => !q || normalizeText(g.name).includes(q));
-      const renderBtn = g => {
+      const renderSimpleBtn = (g, mode) => {
         const id = String(g.id);
-        return `<div class="genre-option-card" data-genre-card="${escapeHtml(id)}" data-genre-name="${escapeHtml(g.name)}">
-          <div class="genre-option-name">${escapeHtml(g.name)}</div>
-          <div class="genre-choice-row">
-            <button type="button" class="genre-choice include ${browseState.genreIds.has(id) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">＋ 含める</button>
-            <button type="button" class="genre-choice exclude ${browseState.excludeGenreIds.has(id) ? 'active' : ''}" data-browse-exclude-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">− 除外</button>
-          </div>
-        </div>`;
+        const active = mode === 'include' ? browseState.genreIds.has(id) : browseState.excludeGenreIds.has(id);
+        const cls = mode === 'include' ? 'include' : 'exclude';
+        return `<button type="button" class="fixed-genre-btn ${active ? 'active ' + cls : ''}" data-browse-${mode}-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
       };
       let html = '';
-      html += `<div class="genre-option-group"><div class="genre-section-title"><span>人気ジャンル</span><span>含める／除外を選択</span></div><div class="genre-option-grid">${popular.map(renderBtn).join('')}</div></div>`;
-      if (all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>すべてのジャンル</span><span>${all.length}件</span></div><div class="genre-option-grid">${all.slice(0, 180).map(renderBtn).join('')}</div></div>`;
+      const genrePool = q ? uniqueGenres([...popular, ...all]) : popular;
+      html += `<div class="genre-option-group"><div class="genre-section-title"><span>含めるジャンル</span><span>選択すると上のチップに追加</span></div><div class="fixed-genre-box">${genrePool.map(g => renderSimpleBtn(g, 'include')).join('')}</div></div>`;
+      html += `<div class="genre-option-group"><div class="genre-section-title"><span>除外するジャンル</span><span>選択したジャンルを含む作品を消す</span></div><div class="fixed-genre-box">${genrePool.map(g => renderSimpleBtn(g, 'exclude')).join('')}</div></div>`;
+      if (!q && all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>その他のジャンル</span><span>${all.length}件</span></div><div class="fixed-genre-box">${all.slice(0, 180).map(g => renderSimpleBtn(g, 'include')).join('')}</div></div>`;
       if (!popular.length && !all.length) html = '<div class="empty">該当ジャンルがありません。</div>';
       $('browseGenreList').innerHTML = html;
-      $('browseGenreList').querySelectorAll('[data-browse-genre-id]').forEach(btn => btn.addEventListener('click', () => {
-        const id = String(btn.dataset.browseGenreId);
+      $('browseGenreList').querySelectorAll('[data-browse-include-genre-id]').forEach(btn => btn.addEventListener('click', () => {
+        const id = String(btn.dataset.browseIncludeGenreId);
         const name = String(btn.dataset.browseGenreName || '');
         if (name) genreNameById.set(id, name);
         browseState.excludeGenreIds.delete(id);
@@ -1466,66 +1508,77 @@
       return sel.format === 'vr' ? allGenresVR : allGenres2D;
     }
 
-    function renderGenres() {
-      const list = currentGenres();
-      const q = $('genreFilter').value.trim().toLowerCase();
-      if (!list.length) {
-        $('genreArea').innerHTML = '<div class="empty">ジャンル未取得です。「ジャンル再取得」を押してください。</div>';
-        renderGenreChips();
-        return;
-      }
-      const used = new Set();
-      const html = genreCategories.map(cat => {
-        let items = list.filter(g => {
-          const hitCat = cat.keys.some(k => g.name.includes(k));
-          const hitQuery = !q || g.name.toLowerCase().includes(q);
-          return hitCat && hitQuery;
-        }).slice(0, 28);
-        items.forEach(g => used.add(g.id));
-        if (!items.length) return '';
-        return `<div class="genre-group"><h4>${escapeHtml(cat.name)}</h4><div class="button-row">${items.map(genreButtonHtml).join('')}</div></div>`;
-      }).join('');
+    function fixedRecommendGenres() {
+      const format = sel.format || '2d';
+      return fallbackGenres(format);
+    }
 
-      let others = list.filter(g => !used.has(g.id) && (!q || g.name.toLowerCase().includes(q))).slice(0, 48);
-      const otherHtml = others.length ? `<div class="genre-group"><h4>その他</h4><div class="button-row">${others.map(genreButtonHtml).join('')}</div></div>` : '';
-      $('genreArea').innerHTML = html + otherHtml || '<div class="empty">該当ジャンルがありません。</div>';
-      $('genreArea').querySelectorAll('.pill').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.genreId;
-          if (genreIds.has(id)) { genreIds.delete(id); btn.classList.remove('active'); }
-          else { genreIds.add(id); btn.classList.add('active'); }
-          renderGenreChips();
+    function renderGenres() {
+      const list = fixedRecommendGenres();
+      for (const g of list) genreNameById.set(String(g.id), g.name);
+
+      const incQ = normalizeText($('includeGenreFilter')?.value || '');
+      const excQ = normalizeText($('excludeGenreFilter')?.value || '');
+
+      const renderBox = (targetId, mode, q) => {
+        const selectedSet = mode === 'include' ? genreIds : excludeGenreIds;
+        const otherSet = mode === 'include' ? excludeGenreIds : genreIds;
+        const filtered = list.filter(g => !q || normalizeText(g.name).includes(q));
+        if (!$(targetId)) return;
+        $(targetId).innerHTML = filtered.map(g => {
+          const id = String(g.id);
+          const active = selectedSet.has(id);
+          return `<button type="button" class="fixed-genre-btn ${active ? 'active ' + mode : ''}" data-rec-genre-mode="${mode}" data-rec-genre-id="${escapeHtml(id)}" data-rec-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+        }).join('') || '<div class="empty">該当ジャンルがありません。</div>';
+        $(targetId).querySelectorAll('[data-rec-genre-id]').forEach(btn => btn.addEventListener('click', () => {
+          const id = String(btn.dataset.recGenreId);
+          const name = String(btn.dataset.recGenreName || '');
+          if (name) genreNameById.set(id, name);
+          otherSet.delete(id);
+          if (selectedSet.has(id)) selectedSet.delete(id);
+          else selectedSet.add(id);
+          renderGenres();
           renderSelectedChips();
-        });
-      });
+        }));
+      };
+
+      renderBox('includeGenreBox', 'include', incQ);
+      renderBox('excludeGenreBox', 'exclude', excQ);
       renderGenreChips();
     }
 
-    function genreButtonHtml(g) {
-      return `<button class="pill ${genreIds.has(g.id) ? 'active' : ''}" data-genre-id="${escapeHtml(g.id)}">${escapeHtml(g.name)}</button>`;
-    }
-
     function renderGenreChips() {
-      $('selectedGenreChips').innerHTML = [...genreIds].map(id => {
-        const name = genreNameById.get(id) || id;
-        return `<span class="chip">${escapeHtml(name)}<button data-remove-genre="${escapeHtml(id)}">×</button></span>`;
-      }).join('');
-      $('selectedGenreChips').querySelectorAll('[data-remove-genre]').forEach(btn => {
+      const makeChip = (id, setObj, prefix, extraClass='') => {
+        const name = genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id);
+        return `<span class="chip ${extraClass}">${escapeHtml(prefix)}${escapeHtml(name)}<button data-rec-remove-genre="${escapeHtml(String(id))}" data-rec-remove-from="${setObj === genreIds ? 'include' : 'exclude'}">×</button></span>`;
+      };
+      if ($('includeGenreChips')) $('includeGenreChips').innerHTML = [...genreIds].map(id => makeChip(id, genreIds, '')).join('');
+      if ($('excludeGenreChips')) $('excludeGenreChips').innerHTML = [...excludeGenreIds].map(id => makeChip(id, excludeGenreIds, '', 'exclude')).join('');
+      document.querySelectorAll('[data-rec-remove-genre]').forEach(btn => {
         btn.addEventListener('click', () => {
-          genreIds.delete(btn.dataset.removeGenre);
+          const id = String(btn.dataset.recRemoveGenre);
+          if (btn.dataset.recRemoveFrom === 'exclude') excludeGenreIds.delete(id);
+          else genreIds.delete(id);
           renderGenres();
           renderSelectedChips();
         });
       });
     }
 
+    function genreButtonHtml(g) {
+      return `<button class="pill ${genreIds.has(g.id) ? 'active' : ''}" data-genre-id="${escapeHtml(g.id)}">${escapeHtml(g.name)}</button>`;
+    }
+
     function allSelectedLabels() {
       const labels = [];
       if (sel.format) labels.push(sel.format === 'vr' ? 'VR' : '2D');
+      const release = releaseDateLabel();
+      if (release) labels.push(release);
       Object.values(specs).forEach(v => labels.push(v));
       tags.forEach(v => labels.push(v));
       makerTags.forEach(v => labels.push(v));
-      genreIds.forEach(id => labels.push(genreNameById.get(id) || id));
+      genreIds.forEach(id => labels.push('含む:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
+      excludeGenreIds.forEach(id => labels.push('除外:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
       const kw = $('recommendKeyword')?.value?.trim();
       if (kw) labels.push(kw);
       return labels;
@@ -1545,13 +1598,44 @@
       return parts.join(' ');
     }
 
-    function eraParams() {
-      const era = specs.era;
-      if (!era) return {};
-      if (era === '〜2015年') return { lte_date: '2015-12-31T23:59:59' };
-      if (era === '2016〜2020年') return { gte_date: '2016-01-01T00:00:00', lte_date: '2020-12-31T23:59:59' };
-      if (era === '2021〜2025年') return { gte_date: '2021-01-01T00:00:00', lte_date: '2025-12-31T23:59:59' };
-      if (era === '2026年〜') return { gte_date: '2026-01-01T00:00:00' };
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function localDateTimeString(date, endOfDay = false) {
+      const d = new Date(date);
+      if (endOfDay) d.setHours(23, 59, 59, 0);
+      else d.setHours(0, 0, 0, 0);
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    }
+
+    function todayEndParam() {
+      return localDateTimeString(new Date(), true);
+    }
+
+    function releaseDateLabel() {
+      const v = $('releaseDateSelect')?.value || '';
+      const map = {
+        today: '今日までの新着',
+        '7days': '直近7日',
+        '30days': '直近30日',
+        before2015: '〜2015年'
+      };
+      if (!v) return '';
+      return map[v] || `${v}年`;
+    }
+
+    function releaseDateParams() {
+      const v = $('releaseDateSelect')?.value || '';
+      if (!v) return {};
+      const now = new Date();
+      if (v === 'today') return { lte_date: todayEndParam() };
+      if (v === '7days' || v === '30days') {
+        const days = v === '7days' ? 7 : 30;
+        const from = new Date(now);
+        from.setDate(from.getDate() - days);
+        return { gte_date: localDateTimeString(from, false), lte_date: todayEndParam() };
+      }
+      if (v === 'before2015') return { lte_date: '2015-12-31T23:59:59' };
+      if (/^\d{4}$/.test(v)) return { gte_date: `${v}-01-01T00:00:00`, lte_date: `${v}-12-31T23:59:59` };
       return {};
     }
 
@@ -1569,9 +1653,10 @@
         service: 'digital',
         hits: format === 'vr' ? 40 : 50,
         sort: sortParam(recommendSort),
-        ...eraParams()
+        ...releaseDateParams()
       }, format);
-      lastRecommendQuery = { base, keyword, genreIds: [...genreIds] };
+      if (recommendSort === 'date' && !base.lte_date) base.lte_date = todayEndParam();
+      lastRecommendQuery = { base, keyword, genreIds: [...genreIds], excludeGenreIds: [...excludeGenreIds] };
       $('recommendStatus').className = 'loading';
       $('recommendStatus').textContent = '検索中...';
       $('recommendResults').innerHTML = '';
@@ -1579,7 +1664,9 @@
       try {
         let items = [];
         const selectedGenres = [...genreIds].slice(0, 6);
-        const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || '' }));
+        const excludedGenres = [...excludeGenreIds].slice(0, 12);
+        const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '') }));
+        const excludeGenrePairs = excludedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '') }));
         const keywordParts = uniqueStrings([keyword, ...genrePairs.map(g => g.name), format === 'vr' ? 'VR' : ''].filter(Boolean));
         const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
 
@@ -1612,7 +1699,8 @@
 
         items = filterByFormat(uniqueItems(items), format);
         // おすすめは完全一致で0件にしない。厳密一致が十分ある時だけ厳密化し、基本はスコア順。
-        const strict = applyStrictFilters(items, { genrePairs });
+        items = applyStrictFilters(items, { excludeGenrePairs });
+        const strict = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
         const pool = strict.length >= 4 ? strict : items;
         const keywordsForScore = keywordParts.filter(k => k !== 'VR');
         items = [...pool].sort((a, b) => {
@@ -1656,7 +1744,8 @@
         service: 'digital',
         hits: 40,
         sort: browseState.mode === 'ranking' ? 'rank' : 'date',
-        keyword
+        keyword,
+        ...(browseState.mode === 'new' ? { lte_date: todayEndParam() } : {})
       }, browseState.format);
       $('browseStatus').className = 'loading';
       $('browseStatus').textContent = '読み込み中...';
@@ -1671,6 +1760,17 @@
           keyword: keywordRaw,
           sortNew: browseState.mode === 'new'
         });
+        if (browseState.mode === 'new' && !items.length && baseParams.lte_date) {
+          const fallbackParams = { ...baseParams };
+          delete fallbackParams.lte_date;
+          items = await collectBrowseItems(fallbackParams, {
+            desired: 120,
+            genrePairs,
+            keywordGenrePairs,
+            keyword: keywordRaw,
+            sortNew: true
+          });
+        }
         items = filterByFormat(uniqueItems(items), browseState.format);
         items = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
         if (browseState.mode === 'new') {
@@ -1893,7 +1993,9 @@
       tags.clear();
       specs = {};
       genreIds.clear();
+      excludeGenreIds.clear();
       makerTags.clear();
+      if ($('releaseDateSelect')) $('releaseDateSelect').value = '';
       $('recommendKeyword').value = '';
       document.querySelectorAll('#recommend .pill').forEach(b => b.classList.remove('active'));
       renderGenres();
