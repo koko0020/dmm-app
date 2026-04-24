@@ -476,6 +476,22 @@
     .keyword-field input { width:100%; padding-right:46px; }
     .clear-keyword { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border:0; border-radius:50%; background:#fff1f1; color:var(--accent); font-weight:900; cursor:pointer; display:none; line-height:1; box-shadow:inset 0 0 0 1px rgba(230,0,18,.12); }
     .clear-keyword.visible { display:grid; place-items:center; }
+
+    .actress-input-wrap { position: relative; width: 100%; }
+    .actress-suggestions { margin-top: 10px; border: 1px solid rgba(230,0,18,.14); border-radius: 16px; background: #fff; box-shadow: 0 14px 34px rgba(80,0,10,.10); overflow: hidden; display: none; }
+    .actress-suggestions.open { display: block; }
+    .actress-suggestion { width: 100%; border: 0; background: #fff; padding: 10px 12px; display: flex; gap: 12px; align-items: center; text-align: left; cursor: pointer; border-bottom: 1px solid rgba(230,0,18,.08); color: var(--text); }
+    .actress-suggestion:last-child { border-bottom: 0; }
+    .actress-suggestion:hover { background: #fff5f5; }
+    .actress-suggestion img { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; background: #fff1f1; flex: 0 0 auto; }
+    .actress-suggestion .no-photo { width: 46px; height: 46px; border-radius: 12px; background: #fff1f1; color: var(--accent); display: grid; place-items: center; font-weight: 900; flex: 0 0 auto; }
+    .actress-suggestion-name { font-weight: 900; font-size: 14px; }
+    .actress-suggestion-ruby { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .actress-selected { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .lightbox-scroll-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; width: 100%; max-height: 82vh; border-radius: 14px; }
+    .lightbox-slide { flex: 0 0 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; min-height: min(72vh, 720px); }
+    .lightbox-scroll-track::-webkit-scrollbar { height: 8px; }
+    .lightbox-scroll-track::-webkit-scrollbar-thumb { background: rgba(230,0,18,.28); border-radius: 999px; }
     .thumb.detail-thumb { cursor:pointer; border:0; width:100%; }
 
     /* v12 recommendation fixed genre picker + release selector */
@@ -728,9 +744,19 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>9. キーワード・女優名</h2></div>
+          <div class="section-head"><h2>9. キーワード</h2></div>
           <div class="search-box">
-            <input id="recommendKeyword" placeholder="例：MM号、椿りか、剛毛..." />
+            <input id="recommendKeyword" placeholder="例：MM号、剛毛、制服..." />
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><h2>10. 女優名</h2></div>
+          <p class="hint">日本語変換をEnterで確定したタイミングで候補を表示します。候補を選ぶと検索条件に入ります。</p>
+          <div class="search-box actress-input-wrap">
+            <input id="recommendActress" placeholder="例：三上悠亜" autocomplete="off" />
+            <div id="actressSuggestions" class="actress-suggestions"></div>
+            <div id="selectedActresses" class="actress-selected"></div>
           </div>
         </div>
 
@@ -858,7 +884,7 @@
       </div>
       <div class="lightbox-stage">
         <button class="lightbox-nav prev" id="lightboxPrev" type="button" aria-label="前の画像">‹</button>
-        <img id="lightboxImg" class="lightbox-img" alt="拡大画像">
+        <div id="lightboxTrack" class="lightbox-scroll-track" aria-label="拡大画像一覧"></div>
         <button class="lightbox-nav next" id="lightboxNext" type="button" aria-label="次の画像">›</button>
       </div>
     </div>
@@ -890,6 +916,11 @@
     let lightboxImages = [];
     let lightboxIndex = 0;
     const actressProfileCache = new Map();
+    const actressSuggestCache = new Map();
+    let selectedActresses = new Map();
+    let actressSuggestTimer = null;
+    let actressImeComposing = false;
+    let lightboxScrollTimer = null;
 
     const situationTags = ['NTR','ドラマ','素人','ハメ撮り','企画','痴女','M男','ハーレム','子作り','先生 生徒','上司','家庭教師','彼女','友達','セフレ','温泉','銭湯','メンエス','ピンサロ','ソープ','制服','水着','主観','天井特化'];
     const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人','イラマチオ'];
@@ -1209,7 +1240,8 @@
         age: Number(raw?.age) || calcAgeFromBirthday(birthday),
         height: parseNumber(raw?.height),
         bust: parseNumber(raw?.bust),
-        cup: raw?.cup || raw?.cups || ''
+        cup: raw?.cup || raw?.cups || '',
+        image: raw?.imageURL?.large || raw?.imageURL?.small || raw?.imageURL?.list || raw?.image_url || raw?.image || ''
       };
     }
 
@@ -1487,7 +1519,9 @@
       if ($('includeGenreFilter')) $('includeGenreFilter').addEventListener('input', renderGenres);
       if ($('releaseDateSelect')) $('releaseDateSelect').addEventListener('change', renderSelectedChips);
       $('recommendKeyword').addEventListener('input', renderSelectedChips);
+      $('recommendKeyword').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) loadRecommend(); });
       if ($('recommendExcludeKeyword')) $('recommendExcludeKeyword').addEventListener('input', renderSelectedChips);
+      if ($('recommendActress')) setupRecommendActressInput();
       $('recommendSearch').addEventListener('click', () => loadRecommend());
       $('resetConditions').addEventListener('click', resetConditions);
 
@@ -1515,6 +1549,7 @@
       $('closeLightbox').addEventListener('click', closeLightbox);
       $('lightboxPrev').addEventListener('click', () => moveLightbox(-1));
       $('lightboxNext').addEventListener('click', () => moveLightbox(1));
+      setupLightboxScroll();
       document.addEventListener('keydown', handleLightboxKey);
       $('detailContent').addEventListener('click', handleDetailImageClick);
       $('recommendResults').addEventListener('click', handleDetailClick);
@@ -1871,11 +1906,143 @@
       excludeKeywordTokens().forEach(v => labels.push('除外:' + v));
       const kw = $('recommendKeyword')?.value?.trim();
       if (kw) labels.push(kw);
+      selectedActresses.forEach(a => labels.push('女優:' + a.name));
+      const rawActress = $('recommendActress')?.value?.trim();
+      if (rawActress && !selectedActresses.size) labels.push('女優:' + rawActress);
       return labels;
     }
 
     function renderSelectedChips() {
       $('selectedChips').innerHTML = allSelectedLabels().map(l => `<span class="chip">${escapeHtml(String(l).replace(' ', '・'))}</span>`).join('');
+    }
+
+    function actressKey(a) {
+      return String(a?.id || a?.name || '').trim();
+    }
+
+    function renderSelectedActresses() {
+      const box = $('selectedActresses');
+      if (!box) return;
+      box.innerHTML = [...selectedActresses.values()].map(a => `<span class="chip">${escapeHtml(a.name)}<button type="button" data-remove-actress="${escapeHtml(actressKey(a))}">×</button></span>`).join('');
+      box.querySelectorAll('[data-remove-actress]').forEach(btn => btn.addEventListener('click', () => {
+        selectedActresses.delete(String(btn.dataset.removeActress));
+        renderSelectedActresses();
+        renderSelectedChips();
+      }));
+    }
+
+    function hideActressSuggestions() {
+      const box = $('actressSuggestions');
+      if (!box) return;
+      box.classList.remove('open');
+      box.innerHTML = '';
+    }
+
+    function renderActressSuggestions(list) {
+      const box = $('actressSuggestions');
+      if (!box) return;
+      if (!list.length) {
+        box.innerHTML = '<div class="empty" style="margin:0;border:0;">候補が見つかりませんでした。</div>';
+        box.classList.add('open');
+        return;
+      }
+      box.innerHTML = list.map((a, i) => {
+        const img = a.image ? `<img src="${escapeHtml(a.image)}" alt="${escapeHtml(a.name)}">` : `<span class="no-photo">女</span>`;
+        return `<button type="button" class="actress-suggestion" data-actress-index="${i}">
+          ${img}
+          <span><span class="actress-suggestion-name">${escapeHtml(a.name || '名前未取得')}</span>${a.ruby ? `<span class="actress-suggestion-ruby">${escapeHtml(a.ruby)}</span>` : ''}</span>
+        </button>`;
+      }).join('');
+      box.classList.add('open');
+      box.querySelectorAll('[data-actress-index]').forEach(btn => btn.addEventListener('click', () => {
+        const a = list[Number(btn.dataset.actressIndex)];
+        if (!a) return;
+        selectedActresses.set(actressKey(a), a);
+        $('recommendActress').value = '';
+        hideActressSuggestions();
+        renderSelectedActresses();
+        renderSelectedChips();
+      }));
+    }
+
+    function normalizeActressCandidate(raw) {
+      const p = normalizeActressProfile(raw || {});
+      return {
+        id: p.id || String(raw?.id || raw?.actress_id || ''),
+        name: p.name || raw?.name || '',
+        ruby: raw?.ruby || raw?.kana || raw?.name_kana || '',
+        image: p.image || raw?.imageURL?.large || raw?.imageURL?.small || raw?.imageURL?.list || ''
+      };
+    }
+
+    async function searchActressCandidates(query) {
+      const q = String(query || '').trim();
+      if (!q) return [];
+      const key = normalizeText(q);
+      if (actressSuggestCache.has(key)) return actressSuggestCache.get(key);
+      const json = await dmmGet('ActressSearch', { keyword: q, hits: 12 });
+      const result = json?.result || {};
+      const list = result.actress || result.actresses || result.items || [];
+      const arr = (Array.isArray(list) ? list : [list]).map(normalizeActressCandidate).filter(a => a.name);
+      actressSuggestCache.set(key, arr);
+      return arr;
+    }
+
+    async function updateActressSuggestionsFromInput() {
+      const input = $('recommendActress');
+      if (!input) return;
+      const q = input.value.trim();
+      if (!q) { hideActressSuggestions(); renderSelectedChips(); return; }
+      try {
+        $('actressSuggestions').innerHTML = '<div class="empty" style="margin:0;border:0;">候補を検索中...</div>';
+        $('actressSuggestions').classList.add('open');
+        const list = await searchActressCandidates(q);
+        renderActressSuggestions(list);
+      } catch (e) {
+        $('actressSuggestions').innerHTML = '<div class="empty" style="margin:0;border:0;">候補取得に失敗しました。</div>';
+        $('actressSuggestions').classList.add('open');
+      }
+      renderSelectedChips();
+    }
+
+    function setupRecommendActressInput() {
+      const input = $('recommendActress');
+      if (!input) return;
+      input.addEventListener('compositionstart', () => { actressImeComposing = true; });
+      input.addEventListener('compositionend', () => {
+        actressImeComposing = false;
+        clearTimeout(actressSuggestTimer);
+        actressSuggestTimer = setTimeout(updateActressSuggestionsFromInput, 80);
+      });
+      input.addEventListener('input', () => {
+        renderSelectedChips();
+        if (actressImeComposing) return;
+        clearTimeout(actressSuggestTimer);
+        actressSuggestTimer = setTimeout(updateActressSuggestionsFromInput, 450);
+      });
+      input.addEventListener('keydown', async e => {
+        if (e.key !== 'Enter' || e.isComposing || actressImeComposing) return;
+        e.preventDefault();
+        const first = $('actressSuggestions')?.querySelector('.actress-suggestion');
+        if (first) first.click();
+        else await updateActressSuggestionsFromInput();
+        loadRecommend();
+      });
+    }
+
+    function selectedActressNames() {
+      const names = [...selectedActresses.values()].map(a => a.name).filter(Boolean);
+      const raw = $('recommendActress')?.value?.trim();
+      if (!names.length && raw) names.push(raw);
+      return names;
+    }
+
+    function matchesSelectedActresses(item) {
+      const names = selectedActressNames();
+      if (!names.length) return true;
+      const actresses = item.iteminfo?.actress || [];
+      const text = normalizeText(actresses.map(a => `${a.name || ''} ${a.ruby || ''} ${a.id || ''}`).join(' '));
+      return names.some(name => text.includes(normalizeText(name)));
     }
 
     function buildKeyword() {
@@ -1945,7 +2112,7 @@
       const keyword = buildKeyword();
       const base = applyFormatParams({
         service: 'digital',
-        hits: format === 'vr' ? 60 : 80,
+        hits: 100,
         sort: sortParam(recommendSort),
         ...releaseDateParams()
       }, format);
@@ -1953,11 +2120,10 @@
       const excludeKeywords = excludeKeywordTokens();
       lastRecommendQuery = { base, keyword, excludeKeywords, genreIds: [...genreIds], excludeGenreIds: [...excludeGenreIds] };
       $('recommendStatus').className = 'loading';
-      $('recommendStatus').textContent = '検索中...';
+      $('recommendStatus').textContent = '検索中... 条件に合う作品を100件ずつ確認しています。';
       $('recommendResults').innerHTML = '';
       renderSelectedChips();
       try {
-        let items = [];
         const selectedGenres = [...genreIds].slice(0, 8);
         const genrePairs = selectedGenres.map(id => ({
           id,
@@ -1967,68 +2133,72 @@
         if (sel.workType === 'multiple') genrePairs.push({ id: 'kw:複数', name: '複数' });
         const excludeGenrePairs = [];
 
-        // APIに投げる検索語。年齢・身長・カップ数は女優プロフィールで厳密判定する。
         const expandedGenreWords = [];
         for (const g of genrePairs) {
+          if (!g.name) continue;
           expandedGenreWords.push(g.name);
           if (normalizeText(g.name).includes(normalizeText('デビュー'))) expandedGenreWords.push('デビュー', 'デビュー作', '新人');
           if (normalizeText(g.name) === normalizeText('企画')) expandedGenreWords.push('企画単体', '企画作品');
         }
-        const keywordParts = uniqueStrings([keyword, ...expandedGenreWords, format === 'vr' ? 'VR' : ''].filter(Boolean));
-        const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
-        const fetchItemList = async (params, pages = 1) => {
-          const hits = Number(params.hits || base.hits || 80);
-          for (let i = 0; i < pages; i++) {
-            try {
-              const json = await dmmGet('ItemList', { ...params, offset: 1 + i * hits });
-              addUnique(normalizeItems(json));
-            } catch {}
+        const actressNames = selectedActressNames();
+        const primaryKeyword = uniqueStrings([keyword, ...expandedGenreWords, ...actressNames, format === 'vr' ? 'VR' : ''].filter(Boolean)).join(' ');
+        const numericGenre = genrePairs.find(g => g.id && !String(g.id).startsWith('kw:'));
+        const results = [];
+        const seen = new Set();
+        const maxPages = 12;
+        const hits = 100;
+
+        const addIfGood = async (batch) => {
+          let filtered = filterByFormat(uniqueItems(batch), format);
+          filtered = applyStrictFilters(filtered, { genrePairs, excludeGenrePairs });
+          filtered = filtered.filter(matchesSelectedActresses);
+          filtered = applyExcludeKeywords(filtered, excludeKeywords);
+          filtered = await filterByActressSpecs(filtered);
+          for (const item of filtered) {
+            const key = item.content_id || item.product_id || item.title;
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            results.push(item);
+            if (results.length >= 20) break;
           }
         };
 
-        // 女優条件（年齢・身長・バスト目安）は、作品を先に広めに取得した後で、
-        // 作品に紐づく女優プロフィールを確認して絞る。
-        // 例: 「156〜160cm + デビュー作品」なら、まずデビュー作品を人気順/新着順で取得し、
-        // その作品の女優身長をActressSearchで確認する。
+        for (let page = 0; page < maxPages && results.length < 20; page++) {
+          const offset = 1 + page * hits;
+          const batch = [];
+          const fetches = [];
+          const pushItems = (json) => { batch.push(...normalizeItems(json)); };
 
-        // ジャンルIDがある場合は各ジャンルで複数ページ取得し、あとでAND条件として厳密に絞る。
-        for (const gp of genrePairs) {
-          if (gp.id && !String(gp.id).startsWith('kw:')) {
-            await fetchItemList({ ...base, genre_id: gp.id, keyword: keyword || undefined }, 5);
+          if (numericGenre) {
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, genre_id: numericGenre.id, keyword: primaryKeyword || undefined }).then(pushItems).catch(() => {}));
           }
+          fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: primaryKeyword || undefined }).then(pushItems).catch(() => {}));
+
+          // 女優名が選ばれている場合は、女優名単体でも拾う。候補確認後に出演女優で厳密に絞る。
+          for (const name of actressNames.slice(0, 3)) {
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: uniqueStrings([name, ...expandedGenreWords, keyword].filter(Boolean)).join(' ') }).then(pushItems).catch(() => {}));
+          }
+
+          await Promise.all(fetches);
+          await addIfGood(batch);
+          $('recommendStatus').textContent = `検索中... ${Math.min((page + 1) * 100, maxPages * 100)}件分を確認 / ${results.length}件ヒット`;
         }
 
-        // キーワード・固定ジャンル名でも広く拾う。拾った後に必須条件で落とす。
-        const queries = keywordParts.length ? keywordParts : [''];
-        for (const q of queries.slice(0, 10)) {
-          if (items.length > 260) break;
-          await fetchItemList({ ...base, keyword: q }, 3);
+        // 条件が厳しくて0件の場合だけ、作品条件を少し緩めて近い候補を出す。
+        let finalItems = results;
+        if (!finalItems.length) {
+          const json = await dmmGet('ItemList', { ...base, hits: 40, keyword: primaryKeyword || keyword || undefined });
+          let fallback = filterByFormat(normalizeItems(json), format);
+          fallback = applyExcludeKeywords(fallback, excludeKeywords);
+          fallback = fallback.filter(matchesSelectedActresses);
+          finalItems = fallback.slice(0, 20);
         }
 
-        // 条件が少ないとき用のベース取得。
-        if (items.length < 60) {
-          await fetchItemList({ ...base, keyword: format === 'vr' ? 'VR' : undefined }, 5);
-        }
-
-        items = filterByFormat(uniqueItems(items), format);
-
-        // 必須条件：フォーマット、単体/複数、発売日、選択ジャンル、年齢、身長、カップ数。
-        // シチュエーション・プレイ内容・メーカー・自由キーワードはスコア加点にして、組み合わせ時のズレを減らす。
-        items = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
-        items = applyExcludeKeywords(items, excludeKeywords);
-        items = await filterByActressSpecs(items);
-
-        const keywordsForScore = keywordParts.filter(k => k !== 'VR' && !genrePairs.some(g => normalizeText(g.name) === normalizeText(k)));
-        items = [...items].sort((a, b) => {
-          const diff = scoreItem(b, { genrePairs, keywords: keywordsForScore }) - scoreItem(a, { genrePairs, keywords: keywordsForScore });
-          if (diff) return diff;
-          if (recommendSort === 'date') return Date.parse((b.date || '').replace(' ', 'T')) - Date.parse((a.date || '').replace(' ', 'T'));
-          return 0;
-        }).slice(0, 20);
-
-        renderCards('recommendResults', items);
+        renderCards('recommendResults', finalItems.slice(0, 20));
         $('recommendStatus').className = 'empty';
-        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。作品条件を先に取得し、女優プロフィール条件で絞り込んでいます。` : '該当作品が見つかりませんでした。年齢・身長・バスト目安・ジャンルなどの条件を少し広げて再検索してください。';
+        $('recommendStatus').textContent = finalItems.length
+          ? `${Math.min(finalItems.length, 20)}件表示しています。${hasActressSpecFilters() ? '作品を100件ずつ取得し、女優プロフィール条件で確認しています。' : ''}`
+          : '該当作品が見つかりませんでした。年齢・身長・バスト目安・ジャンルなどの条件を少し広げて再検索してください。';
       } catch (err) {
         $('recommendStatus').className = 'error';
         $('recommendStatus').textContent = '検索に失敗しました。' + err.message;
@@ -2279,17 +2449,51 @@
     }
 
     function renderLightbox() {
-      const src = lightboxImages[lightboxIndex];
-      $('lightboxImg').src = src || '';
+      const track = $('lightboxTrack');
+      if (!track) return;
+      track.innerHTML = lightboxImages.map((src, i) => `<div class="lightbox-slide"><img class="lightbox-img" src="${escapeHtml(src)}" alt="拡大画像${i + 1}"></div>`).join('');
       $('lightboxCounter').textContent = lightboxImages.length > 1 ? (lightboxIndex + 1) + ' / ' + lightboxImages.length : '';
       $('lightboxPrev').disabled = lightboxImages.length <= 1;
       $('lightboxNext').disabled = lightboxImages.length <= 1;
+      requestAnimationFrame(() => scrollLightboxToIndex(false));
     }
 
     function moveLightbox(delta) {
       if (!lightboxImages.length) return;
       lightboxIndex = (lightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
-      renderLightbox();
+      updateLightboxCounter();
+      scrollLightboxToIndex(true);
+    }
+
+    function updateLightboxCounter() {
+      $('lightboxCounter').textContent = lightboxImages.length > 1 ? (lightboxIndex + 1) + ' / ' + lightboxImages.length : '';
+    }
+
+    function scrollLightboxToIndex(smooth = true) {
+      const track = $('lightboxTrack');
+      if (!track) return;
+      track.scrollTo({ left: lightboxIndex * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    }
+
+    function setupLightboxScroll() {
+      const track = $('lightboxTrack');
+      if (!track) return;
+      track.addEventListener('scroll', () => {
+        clearTimeout(lightboxScrollTimer);
+        lightboxScrollTimer = setTimeout(() => {
+          const next = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+          if (next !== lightboxIndex && next >= 0 && next < lightboxImages.length) {
+            lightboxIndex = next;
+            updateLightboxCounter();
+          }
+        }, 80);
+      });
+      track.addEventListener('wheel', e => {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && lightboxImages.length > 1) {
+          e.preventDefault();
+          track.scrollLeft += e.deltaX;
+        }
+      }, { passive: false });
     }
 
     function handleLightboxKey(e) {
@@ -2301,7 +2505,7 @@
 
     function closeLightbox() {
       $('imageLightbox').classList.remove('active');
-      $('lightboxImg').src = '';
+      if ($('lightboxTrack')) $('lightboxTrack').innerHTML = '';
     }
 
     function resetConditions() {
@@ -2314,6 +2518,10 @@
       if ($('releaseDateSelect')) $('releaseDateSelect').value = '';
       $('recommendKeyword').value = '';
       if ($('recommendExcludeKeyword')) $('recommendExcludeKeyword').value = '';
+      if ($('recommendActress')) $('recommendActress').value = '';
+      selectedActresses.clear();
+      renderSelectedActresses();
+      hideActressSuggestions();
       document.querySelectorAll('#recommend .pill').forEach(b => b.classList.remove('active'));
       renderGenres();
       renderSelectedChips();
