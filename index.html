@@ -477,8 +477,9 @@
     .clear-keyword { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border:0; border-radius:50%; background:#fff1f1; color:var(--accent); font-weight:900; cursor:pointer; display:none; line-height:1; box-shadow:inset 0 0 0 1px rgba(230,0,18,.12); }
     .clear-keyword.visible { display:grid; place-items:center; }
 
-    .actress-input-wrap { position: relative; width: 100%; }
-    .actress-suggestions { margin-top: 10px; border: 1px solid rgba(230,0,18,.14); border-radius: 16px; background: #fff; box-shadow: 0 14px 34px rgba(80,0,10,.10); overflow: hidden; display: none; max-height: 320px; overflow-y:auto; }
+    .actress-input-wrap { position: relative; width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+    .actress-input-wrap input { width: 100%; flex: none; min-width: 0; box-sizing: border-box; }
+    .actress-suggestions { width: 100%; box-sizing: border-box; flex: 0 0 auto; margin-top: 10px; border: 1px solid rgba(230,0,18,.14); border-radius: 16px; background: #fff; box-shadow: 0 14px 34px rgba(80,0,10,.10); overflow: hidden; display: none; max-height: 320px; overflow-y:auto; }
     .actress-suggestions.open { display: block; }
     .actress-suggestion { width: 100%; border: 0; background: #fff; padding: 10px 12px; display: flex; gap: 12px; align-items: center; text-align: left; cursor: pointer; border-bottom: 1px solid rgba(230,0,18,.08); color: var(--text); }
     .actress-suggestion:last-child { border-bottom: 0; }
@@ -929,6 +930,7 @@
     const RECOMMEND_INITIAL_LIMIT = 20;
     const RECOMMEND_MAX_LIMIT = 50;
     let recommendDisplayLimit = RECOMMEND_INITIAL_LIMIT;
+    let recommendCachedResults = [];
     let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', tags: new Set(), makers: new Set(), genreIds: new Set(), excludeGenreIds: new Set(), activeTab: 'recommend' };
     const currentItemsByTarget = {};
     let lightboxImages = [];
@@ -1020,6 +1022,9 @@
       const prof = actressProfileCache.get(String(key));
       if (!prof) return null;
       if (prof.fetchedAt && Date.now() - Number(prof.fetchedAt) > CACHE_MAX_AGE_MS) return null;
+      // 年齢はキャッシュ保存時の値を使わず、ページを開いた日の「今日」から毎回再計算する。
+      // これにより、日付が変わった時に18〜19歳などの判定も自動で更新される。
+      if (prof.birthday) prof.age = calcAgeFromBirthday(prof.birthday);
       return prof;
     }
 
@@ -1237,14 +1242,24 @@
       return m ? Number(m[0]) : null;
     }
 
-    function calcAgeFromBirthday(birthday) {
+    function parseBirthdayParts(birthday) {
       if (!birthday) return null;
-      const m = String(birthday).match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
+      const text = String(birthday).trim();
+      let m = text.match(/^(\d{4})[-\/年.](\d{1,2})[-\/月.](\d{1,2})/);
+      if (!m) m = text.match(/^(\d{4})(\d{2})(\d{2})$/);
       if (!m) return null;
       const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-      const now = new Date();
-      let age = now.getFullYear() - y;
-      const beforeBirthday = (now.getMonth() + 1 < mo) || (now.getMonth() + 1 === mo && now.getDate() < d);
+      if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+      if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+      return { y, mo, d };
+    }
+
+    function calcAgeFromBirthday(birthday, baseDate = new Date()) {
+      const p = parseBirthdayParts(birthday);
+      if (!p) return null;
+      const today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+      let age = today.getFullYear() - p.y;
+      const beforeBirthday = (today.getMonth() + 1 < p.mo) || (today.getMonth() + 1 === p.mo && today.getDate() < p.d);
       if (beforeBirthday) age--;
       return Number.isFinite(age) ? age : null;
     }
@@ -1321,7 +1336,8 @@
         name: raw?.name || '',
         ruby: raw?.ruby || raw?.kana || raw?.name_kana || '',
         birthday,
-        age: Number(raw?.age) || calcAgeFromBirthday(birthday),
+        // APIやキャッシュにageがあっても、birthdayがある場合は今日の日付から毎回再計算する。
+        age: calcAgeFromBirthday(birthday) ?? (Number(raw?.age) || null),
         height: parseNumber(raw?.height),
         bust: parseNumber(raw?.bust),
         cup: raw?.cup || raw?.cups || '',
@@ -1429,7 +1445,9 @@
       const ages = selectedSpecValues('age');
       const heights = selectedSpecValues('height');
       const cups = selectedSpecValues('cup');
-      if (ages.length && !ages.some(label => ageInLabel(profile.age, label))) return false;
+      // 年齢条件は必須条件。birthdayがある場合はキャッシュのageを信用せず、今日の日付から再計算する。
+      const currentAge = profile.birthday ? calcAgeFromBirthday(profile.birthday) : (Number.isFinite(Number(profile.age)) ? Number(profile.age) : null);
+      if (ages.length && !ages.some(label => ageInLabel(currentAge, label))) return false;
       if (heights.length && !heights.some(label => heightInLabel(profile.height, label))) return false;
       if (cups.length && !cups.some(label => bustInCupLabel(profile.bust, label))) return false;
       return true;
@@ -2315,8 +2333,12 @@
 
     async function loadRecommend(resetLimit = false) {
       if (!ensureConfig()) return;
-      if (resetLimit) recommendDisplayLimit = RECOMMEND_INITIAL_LIMIT;
+      if (resetLimit) {
+        recommendDisplayLimit = RECOMMEND_INITIAL_LIMIT;
+        recommendCachedResults = [];
+      }
       const targetLimit = Math.min(RECOMMEND_MAX_LIMIT, recommendDisplayLimit);
+      const appendMode = !resetLimit && recommendCachedResults.length > 0;
       const format = sel.format || '2d';
       const keyword = buildKeyword();
       const base = applyFormatParams({
@@ -2329,8 +2351,10 @@
       const excludeKeywords = excludeKeywordTokens();
       lastRecommendQuery = { base, keyword, excludeKeywords, genreIds: [...genreIds], excludeGenreIds: [...excludeGenreIds] };
       $('recommendStatus').className = 'loading';
-      $('recommendStatus').textContent = '検索中... 条件に合う作品を100件ずつ確認しています。';
-      $('recommendResults').innerHTML = '';
+      $('recommendStatus').textContent = appendMode
+        ? `追加検索中... 既存の${recommendCachedResults.length}件は残したまま、続きを探しています。`
+        : '検索中... 条件に合う作品を100件ずつ確認しています。';
+      if (!appendMode) $('recommendResults').innerHTML = '';
       if ($('recommendMore')) $('recommendMore').hidden = true;
       renderSelectedChips();
       try {
@@ -2353,8 +2377,8 @@
         const actressNames = selectedActressNames();
         const primaryKeyword = uniqueStrings([keyword, ...expandedGenreWords, ...actressNames, format === 'vr' ? 'VR' : ''].filter(Boolean)).join(' ');
         const numericGenre = genrePairs.find(g => g.id && !String(g.id).startsWith('kw:'));
-        const results = [];
-        const seen = new Set();
+        const results = appendMode ? [...recommendCachedResults] : [];
+        const seen = new Set(results.map(item => item.content_id || item.product_id || item.title).filter(Boolean));
         const maxPages = targetLimit > RECOMMEND_INITIAL_LIMIT ? 22 : 12;
         const hits = 100;
 
@@ -2391,7 +2415,9 @@
 
           await Promise.all(fetches);
           await addIfGood(batch);
-          $('recommendStatus').textContent = `検索中... ${Math.min((page + 1) * 100, maxPages * 100)}件分を確認 / ${results.length}件ヒット`;
+          $('recommendStatus').textContent = appendMode
+            ? `追加検索中... ${Math.min((page + 1) * 100, maxPages * 100)}件分を追加確認 / 合計${results.length}件ヒット`
+            : `検索中... ${Math.min((page + 1) * 100, maxPages * 100)}件分を確認 / ${results.length}件ヒット`;
         }
 
         // 条件が厳しくて0件の場合だけ、作品条件を少し緩めて近い候補を出す。
@@ -2405,7 +2431,8 @@
           finalItems = fallback.slice(0, targetLimit);
         }
 
-        const visibleItems = finalItems.slice(0, targetLimit);
+        recommendCachedResults = uniqueItems(finalItems).slice(0, RECOMMEND_MAX_LIMIT);
+        const visibleItems = recommendCachedResults.slice(0, targetLimit);
         renderCards('recommendResults', visibleItems);
         if ($('recommendMore')) {
           $('recommendMore').hidden = !(visibleItems.length >= RECOMMEND_INITIAL_LIMIT && targetLimit < RECOMMEND_MAX_LIMIT);
