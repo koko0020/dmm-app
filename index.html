@@ -189,7 +189,7 @@
 
     .subgrid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 14px;
       margin-top: 12px;
     }
@@ -202,7 +202,7 @@
     .mini-box h4 {
       margin: 0 0 10px;
       font-size: 14px;
-      color: #fff;
+      color: var(--text);
     }
 
     .genre-toolbar {
@@ -489,7 +489,7 @@
     .fixed-genre-btn:hover { background:#fff1f1; }
     .fixed-genre-btn.active.include { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; }
     .fixed-genre-btn.active.exclude { color:#fff; background:#3a3a3a; border-color:transparent; }
-    .release-picker { width:100%; min-height:170px; border:1px solid rgba(230,0,18,.16); border-radius:14px; background:#fff; padding:8px; font-weight:800; color:var(--text); outline:none; }
+    .release-picker { width:100%; min-height:46px; border:1px solid rgba(230,0,18,.16); border-radius:14px; background:#fff; padding:10px 12px; font-weight:800; color:var(--text); outline:none; }
     .release-picker option { padding:8px; border-radius:8px; }
     @media (max-width:760px){ .genre-condition-grid{ grid-template-columns:1fr; } .fixed-genre-box{ grid-template-columns:1fr; } }
 
@@ -580,6 +580,11 @@
             <button class="pill" data-value="2d">📺 2D</button>
             <button class="pill" data-value="vr">🥽 VR</button>
           </div>
+          <div class="filter-title" style="margin-top:14px;">出演形式</div>
+          <div class="button-row" data-single="workType">
+            <button class="pill" data-value="single">👤 単体作品</button>
+            <button class="pill" data-value="multiple">👥 複数</button>
+          </div>
         </div>
 
         <div class="section">
@@ -595,27 +600,6 @@
           </div>
 
           <div class="subgrid">
-            <div class="mini-box">
-              <h4>発売日</h4>
-              <select id="releaseDateSelect" class="release-picker" size="6">
-                <option value="">すべて</option>
-                <option value="today">今日までの新着</option>
-                <option value="7days">直近7日</option>
-                <option value="30days">直近30日</option>
-                <option value="2026">2026年</option>
-                <option value="2025">2025年</option>
-                <option value="2024">2024年</option>
-                <option value="2023">2023年</option>
-                <option value="2022">2022年</option>
-                <option value="2021">2021年</option>
-                <option value="2020">2020年</option>
-                <option value="2019">2019年</option>
-                <option value="2018">2018年</option>
-                <option value="2017">2017年</option>
-                <option value="2016">2016年</option>
-                <option value="before2015">〜2015年</option>
-              </select>
-            </div>
             <div class="mini-box">
               <h4>年齢</h4>
               <div class="button-row" data-spec="age">
@@ -652,23 +636,16 @@
           <div class="section-head">
             <div>
               <h2>3. ジャンル</h2>
-              <p class="hint">おすすめ検索は固定ジャンルから選択します。含めたいジャンルと除外したいジャンルを分けて指定できます。</p>
+              <p class="hint">おすすめ検索は固定ジャンルから選択します。</p>
             </div>
           </div>
           <div class="genre-condition-grid">
             <div class="genre-pane">
-              <h4>含めるジャンル</h4>
+              <h4>ジャンルを選択</h4>
               <p class="hint">選んだジャンルをすべて含む作品を優先します。</p>
-              <input id="includeGenreFilter" class="genre-pane-search" placeholder="含めるジャンルを検索" />
+              <input id="includeGenreFilter" class="genre-pane-search" placeholder="ジャンルを検索" />
               <div id="includeGenreChips" class="chips"></div>
               <div id="includeGenreBox" class="fixed-genre-box"></div>
-            </div>
-            <div class="genre-pane">
-              <h4>除外するジャンル</h4>
-              <p class="hint">選んだジャンルを含む作品は表示しません。</p>
-              <input id="excludeGenreFilter" class="genre-pane-search" placeholder="除外するジャンルを検索" />
-              <div id="excludeGenreChips" class="chips"></div>
-              <div id="excludeGenreBox" class="fixed-genre-box"></div>
             </div>
           </div>
         </div>
@@ -689,7 +666,29 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>7. キーワード・女優名</h2></div>
+          <div class="section-head"><h2>7. 発売日</h2></div>
+          <select id="releaseDateSelect" class="release-picker">
+            <option value="">すべて</option>
+            <option value="today">今日までの新着</option>
+            <option value="7days">直近7日</option>
+            <option value="30days">直近30日</option>
+            <option value="2026">2026年</option>
+            <option value="2025">2025年</option>
+            <option value="2024">2024年</option>
+            <option value="2023">2023年</option>
+            <option value="2022">2022年</option>
+            <option value="2021">2021年</option>
+            <option value="2020">2020年</option>
+            <option value="2019">2019年</option>
+            <option value="2018">2018年</option>
+            <option value="2017">2017年</option>
+            <option value="2016">2016年</option>
+            <option value="before2015">〜2015年</option>
+          </select>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><h2>8. キーワード・女優名</h2></div>
           <div class="search-box">
             <input id="recommendKeyword" placeholder="例：MM号、椿りか、剛毛..." />
           </div>
@@ -728,15 +727,26 @@
             <button class="pill active" data-format="2d">📺 2D</button>
             <button class="pill" data-format="vr">🥽 VR</button>
           </div>
-          <div class="filter-title">ジャンル</div>
-          <div class="genre-select-box" id="browseGenreBox">
-            <button class="genre-select-toggle" id="browseGenreToggle" type="button">
-              <span>ジャンルを選択 ▼</span><span class="count" id="browseGenreCount">未選択</span>
+          <div class="filter-title">含めるジャンル</div>
+          <div class="genre-select-box" id="browseIncludeGenreBox">
+            <button class="genre-select-toggle" id="browseIncludeGenreToggle" type="button">
+              <span>含めるジャンルを選択 ▼</span><span class="count" id="browseIncludeGenreCount">未選択</span>
             </button>
             <div class="genre-select-panel">
-              <input id="browseGenreSearch" class="genre-select-search" placeholder="ジャンル名で検索（例：素人、巨乳、主観）" />
-              <div id="browseGenreSelected" class="selected-line"></div>
-              <div id="browseGenreList" class="genre-option-list"></div>
+              <input id="browseIncludeGenreSearch" class="genre-select-search" placeholder="含めたいジャンルを検索（例：素人、単体作品、主観）" />
+              <div id="browseIncludeGenreSelected" class="selected-line"></div>
+              <div id="browseIncludeGenreList" class="genre-option-list"></div>
+            </div>
+          </div>
+          <div class="filter-title">除外するジャンル</div>
+          <div class="genre-select-box" id="browseExcludeGenreBox">
+            <button class="genre-select-toggle" id="browseExcludeGenreToggle" type="button">
+              <span>除外するジャンルを選択 ▼</span><span class="count" id="browseExcludeGenreCount">未選択</span>
+            </button>
+            <div class="genre-select-panel">
+              <input id="browseExcludeGenreSearch" class="genre-select-search" placeholder="除外したいジャンルを検索（例：NTR、熟女）" />
+              <div id="browseExcludeGenreSelected" class="selected-line"></div>
+              <div id="browseExcludeGenreList" class="genre-option-list"></div>
             </div>
           </div>
           <div class="search-box" style="margin-top:14px;">
@@ -824,7 +834,7 @@
     const UI_STATE_KEY = 'dmm_ui_state_v9';
 
     let config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
-    let sel = { format: null, duration: null };
+    let sel = { format: null, workType: null, duration: null };
     let tags = new Set();
     let specs = {};
     let genreIds = new Set();
@@ -1182,7 +1192,6 @@
       });
 
       if ($('includeGenreFilter')) $('includeGenreFilter').addEventListener('input', renderGenres);
-      if ($('excludeGenreFilter')) $('excludeGenreFilter').addEventListener('input', renderGenres);
       if ($('releaseDateSelect')) $('releaseDateSelect').addEventListener('change', renderSelectedChips);
       $('recommendKeyword').addEventListener('input', renderSelectedChips);
       $('recommendSearch').addEventListener('click', () => loadRecommend());
@@ -1238,11 +1247,16 @@
         saveUiState();
         loadBrowse();
       });
-      $('browseGenreToggle').addEventListener('click', () => {
-        $('browseGenreBox').classList.toggle('open');
+      $('browseIncludeGenreToggle').addEventListener('click', () => {
+        $('browseIncludeGenreBox').classList.toggle('open');
         renderBrowseGenres();
       });
-      $('browseGenreSearch').addEventListener('input', renderBrowseGenres);
+      $('browseExcludeGenreToggle').addEventListener('click', () => {
+        $('browseExcludeGenreBox').classList.toggle('open');
+        renderBrowseGenres();
+      });
+      $('browseIncludeGenreSearch').addEventListener('input', renderBrowseGenres);
+      $('browseExcludeGenreSearch').addEventListener('input', renderBrowseGenres);
       $('browseSearch').addEventListener('click', () => {
         browseState.keyword = $('browseKeyword').value.trim();
         browseState.page = 1;
@@ -1392,68 +1406,61 @@
       const apiList = browseState.format === 'vr' ? allGenresVR : allGenres2D;
       const list = uniqueGenres([...fallbackGenres(browseState.format), ...apiList]);
       for (const g of list) genreNameById.set(String(g.id), g.name);
-      const q = normalizeText($('browseGenreSearch')?.value || '');
-      const selected = browseSelectedGenrePairs();
-      const excluded = browseExcludedGenrePairs();
-      const count = browseState.genreIds.size + browseState.excludeGenreIds.size;
-      if ($('browseGenreCount')) $('browseGenreCount').textContent = count ? `含む${browseState.genreIds.size} / 除外${browseState.excludeGenreIds.size}` : '未選択';
-      if ($('browseGenreSelected')) {
-        const inc = selected.map(g => `<span class="chip">含む：${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
-        const exc = excluded.map(g => `<span class="chip exclude">除外：${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-exclude-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
-        $('browseGenreSelected').innerHTML = `${inc ? `<div class="selected-block"><div class="selected-label">含めるジャンル</div>${inc}</div>` : ''}${exc ? `<div class="selected-block"><div class="selected-label">除外するジャンル</div>${exc}</div>` : ''}`;
-        $('browseGenreSelected').querySelectorAll('[data-browse-remove-genre]').forEach(btn => btn.addEventListener('click', () => {
-          browseState.genreIds.delete(String(btn.dataset.browseRemoveGenre));
+
+      const renderSelected = (targetId, setObj, isExclude=false) => {
+        const pairs = genrePairsFromSet(setObj);
+        if (!$(targetId)) return;
+        $(targetId).innerHTML = pairs.map(g => `<span class="chip ${isExclude ? 'exclude' : ''}">${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-${isExclude ? 'exclude-' : ''}genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
+        const selector = isExclude ? '[data-browse-remove-exclude-genre]' : '[data-browse-remove-genre]';
+        $(targetId).querySelectorAll(selector).forEach(btn => btn.addEventListener('click', () => {
+          const id = isExclude ? String(btn.dataset.browseRemoveExcludeGenre) : String(btn.dataset.browseRemoveGenre);
+          setObj.delete(id);
           browseState.page = 1;
           renderBrowseGenres();
           saveUiState();
         }));
-        $('browseGenreSelected').querySelectorAll('[data-browse-remove-exclude-genre]').forEach(btn => btn.addEventListener('click', () => {
-          browseState.excludeGenreIds.delete(String(btn.dataset.browseRemoveExcludeGenre));
-          browseState.page = 1;
-          renderBrowseGenres();
-          saveUiState();
-        }));
-      }
-      if (!$('browseGenreList')) return;
-      const fallbacks = fallbackGenres(browseState.format);
-      const popular = fallbacks.filter(g => !q || normalizeText(g.name).includes(q));
-      const all = list.filter(g => !fallbacks.some(f => normalizeText(f.name) === normalizeText(g.name)))
-        .filter(g => !q || normalizeText(g.name).includes(q));
-      const renderSimpleBtn = (g, mode) => {
-        const id = String(g.id);
-        const active = mode === 'include' ? browseState.genreIds.has(id) : browseState.excludeGenreIds.has(id);
-        const cls = mode === 'include' ? 'include' : 'exclude';
-        return `<button type="button" class="fixed-genre-btn ${active ? 'active ' + cls : ''}" data-browse-${mode}-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
       };
-      let html = '';
-      const genrePool = q ? uniqueGenres([...popular, ...all]) : popular;
-      html += `<div class="genre-option-group"><div class="genre-section-title"><span>含めるジャンル</span><span>選択すると上のチップに追加</span></div><div class="fixed-genre-box">${genrePool.map(g => renderSimpleBtn(g, 'include')).join('')}</div></div>`;
-      html += `<div class="genre-option-group"><div class="genre-section-title"><span>除外するジャンル</span><span>選択したジャンルを含む作品を消す</span></div><div class="fixed-genre-box">${genrePool.map(g => renderSimpleBtn(g, 'exclude')).join('')}</div></div>`;
-      if (!q && all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>その他のジャンル</span><span>${all.length}件</span></div><div class="fixed-genre-box">${all.slice(0, 180).map(g => renderSimpleBtn(g, 'include')).join('')}</div></div>`;
-      if (!popular.length && !all.length) html = '<div class="empty">該当ジャンルがありません。</div>';
-      $('browseGenreList').innerHTML = html;
-      $('browseGenreList').querySelectorAll('[data-browse-include-genre-id]').forEach(btn => btn.addEventListener('click', () => {
-        const id = String(btn.dataset.browseIncludeGenreId);
-        const name = String(btn.dataset.browseGenreName || '');
-        if (name) genreNameById.set(id, name);
-        browseState.excludeGenreIds.delete(id);
-        if (browseState.genreIds.has(id)) browseState.genreIds.delete(id);
-        else browseState.genreIds.add(id);
-        browseState.page = 1;
-        renderBrowseGenres();
-        saveUiState();
-      }));
-      $('browseGenreList').querySelectorAll('[data-browse-exclude-genre-id]').forEach(btn => btn.addEventListener('click', () => {
-        const id = String(btn.dataset.browseExcludeGenreId);
-        const name = String(btn.dataset.browseGenreName || '');
-        if (name) genreNameById.set(id, name);
-        browseState.genreIds.delete(id);
-        if (browseState.excludeGenreIds.has(id)) browseState.excludeGenreIds.delete(id);
-        else browseState.excludeGenreIds.add(id);
-        browseState.page = 1;
-        renderBrowseGenres();
-        saveUiState();
-      }));
+
+      const renderList = (mode, searchId, listId) => {
+        const q = normalizeText($(searchId)?.value || '');
+        const fallbacks = fallbackGenres(browseState.format);
+        const popular = fallbacks.filter(g => !q || normalizeText(g.name).includes(q));
+        const all = list.filter(g => !fallbacks.some(f => normalizeText(f.name) === normalizeText(g.name)))
+          .filter(g => !q || normalizeText(g.name).includes(q));
+        const setObj = mode === 'include' ? browseState.genreIds : browseState.excludeGenreIds;
+        const otherSet = mode === 'include' ? browseState.excludeGenreIds : browseState.genreIds;
+        const attr = mode === 'include' ? 'data-browse-include-genre-id' : 'data-browse-exclude-genre-id';
+        const renderBtn = (g) => {
+          const id = String(g.id);
+          const active = setObj.has(id);
+          return `<button type="button" class="fixed-genre-btn ${active ? 'active ' + mode : ''}" ${attr}="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+        };
+        let html = '';
+        const genrePool = q ? uniqueGenres([...popular, ...all]) : popular;
+        html += `<div class="genre-option-group"><div class="genre-section-title"><span>人気ジャンル</span><span>${mode === 'include' ? '含めたいジャンル' : '除外したいジャンル'}</span></div><div class="fixed-genre-box">${genrePool.map(renderBtn).join('')}</div></div>`;
+        if (!q && all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>その他のジャンル</span><span>${all.length}件</span></div><div class="fixed-genre-box">${all.slice(0, 180).map(renderBtn).join('')}</div></div>`;
+        if (!popular.length && !all.length) html = '<div class="empty">該当ジャンルがありません。</div>';
+        if (!$(listId)) return;
+        $(listId).innerHTML = html;
+        $(listId).querySelectorAll(`[${attr}]`).forEach(btn => btn.addEventListener('click', () => {
+          const id = String(mode === 'include' ? btn.dataset.browseIncludeGenreId : btn.dataset.browseExcludeGenreId);
+          const name = String(btn.dataset.browseGenreName || '');
+          if (name) genreNameById.set(id, name);
+          otherSet.delete(id);
+          if (setObj.has(id)) setObj.delete(id);
+          else setObj.add(id);
+          browseState.page = 1;
+          renderBrowseGenres();
+          saveUiState();
+        }));
+      };
+
+      if ($('browseIncludeGenreCount')) $('browseIncludeGenreCount').textContent = browseState.genreIds.size ? `${browseState.genreIds.size}件` : '未選択';
+      if ($('browseExcludeGenreCount')) $('browseExcludeGenreCount').textContent = browseState.excludeGenreIds.size ? `${browseState.excludeGenreIds.size}件` : '未選択';
+      renderSelected('browseIncludeGenreSelected', browseState.genreIds, false);
+      renderSelected('browseExcludeGenreSelected', browseState.excludeGenreIds, true);
+      renderList('include', 'browseIncludeGenreSearch', 'browseIncludeGenreList');
+      renderList('exclude', 'browseExcludeGenreSearch', 'browseExcludeGenreList');
     }
 
     function updateClearKeywordButton() {
@@ -1516,49 +1523,37 @@
     function renderGenres() {
       const list = fixedRecommendGenres();
       for (const g of list) genreNameById.set(String(g.id), g.name);
-
-      const incQ = normalizeText($('includeGenreFilter')?.value || '');
-      const excQ = normalizeText($('excludeGenreFilter')?.value || '');
-
-      const renderBox = (targetId, mode, q) => {
-        const selectedSet = mode === 'include' ? genreIds : excludeGenreIds;
-        const otherSet = mode === 'include' ? excludeGenreIds : genreIds;
-        const filtered = list.filter(g => !q || normalizeText(g.name).includes(q));
-        if (!$(targetId)) return;
-        $(targetId).innerHTML = filtered.map(g => {
+      const q = normalizeText($('includeGenreFilter')?.value || '');
+      const filtered = list.filter(g => !q || normalizeText(g.name).includes(q));
+      if ($('includeGenreBox')) {
+        $('includeGenreBox').innerHTML = filtered.map(g => {
           const id = String(g.id);
-          const active = selectedSet.has(id);
-          return `<button type="button" class="fixed-genre-btn ${active ? 'active ' + mode : ''}" data-rec-genre-mode="${mode}" data-rec-genre-id="${escapeHtml(id)}" data-rec-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+          const active = genreIds.has(id);
+          return `<button type="button" class="fixed-genre-btn ${active ? 'active include' : ''}" data-rec-genre-id="${escapeHtml(id)}" data-rec-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
         }).join('') || '<div class="empty">該当ジャンルがありません。</div>';
-        $(targetId).querySelectorAll('[data-rec-genre-id]').forEach(btn => btn.addEventListener('click', () => {
+        $('includeGenreBox').querySelectorAll('[data-rec-genre-id]').forEach(btn => btn.addEventListener('click', () => {
           const id = String(btn.dataset.recGenreId);
           const name = String(btn.dataset.recGenreName || '');
           if (name) genreNameById.set(id, name);
-          otherSet.delete(id);
-          if (selectedSet.has(id)) selectedSet.delete(id);
-          else selectedSet.add(id);
+          if (genreIds.has(id)) genreIds.delete(id);
+          else genreIds.add(id);
           renderGenres();
           renderSelectedChips();
         }));
-      };
-
-      renderBox('includeGenreBox', 'include', incQ);
-      renderBox('excludeGenreBox', 'exclude', excQ);
+      }
       renderGenreChips();
     }
 
     function renderGenreChips() {
-      const makeChip = (id, setObj, prefix, extraClass='') => {
+      const makeChip = (id) => {
         const name = genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id);
-        return `<span class="chip ${extraClass}">${escapeHtml(prefix)}${escapeHtml(name)}<button data-rec-remove-genre="${escapeHtml(String(id))}" data-rec-remove-from="${setObj === genreIds ? 'include' : 'exclude'}">×</button></span>`;
+        return `<span class="chip">${escapeHtml(name)}<button data-rec-remove-genre="${escapeHtml(String(id))}">×</button></span>`;
       };
-      if ($('includeGenreChips')) $('includeGenreChips').innerHTML = [...genreIds].map(id => makeChip(id, genreIds, '')).join('');
-      if ($('excludeGenreChips')) $('excludeGenreChips').innerHTML = [...excludeGenreIds].map(id => makeChip(id, excludeGenreIds, '', 'exclude')).join('');
+      if ($('includeGenreChips')) $('includeGenreChips').innerHTML = [...genreIds].map(id => makeChip(id)).join('');
       document.querySelectorAll('[data-rec-remove-genre]').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = String(btn.dataset.recRemoveGenre);
-          if (btn.dataset.recRemoveFrom === 'exclude') excludeGenreIds.delete(id);
-          else genreIds.delete(id);
+          genreIds.delete(id);
           renderGenres();
           renderSelectedChips();
         });
@@ -1572,13 +1567,13 @@
     function allSelectedLabels() {
       const labels = [];
       if (sel.format) labels.push(sel.format === 'vr' ? 'VR' : '2D');
+      if (sel.workType) labels.push(sel.workType === 'single' ? '単体作品' : '複数');
       const release = releaseDateLabel();
       if (release) labels.push(release);
       Object.values(specs).forEach(v => labels.push(v));
       tags.forEach(v => labels.push(v));
       makerTags.forEach(v => labels.push(v));
       genreIds.forEach(id => labels.push('含む:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
-      excludeGenreIds.forEach(id => labels.push('除外:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
       const kw = $('recommendKeyword')?.value?.trim();
       if (kw) labels.push(kw);
       return labels;
@@ -1664,9 +1659,10 @@
       try {
         let items = [];
         const selectedGenres = [...genreIds].slice(0, 6);
-        const excludedGenres = [...excludeGenreIds].slice(0, 12);
         const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '') }));
-        const excludeGenrePairs = excludedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '') }));
+        if (sel.workType === 'single') genrePairs.push({ id: '4025', name: '単体作品' });
+        if (sel.workType === 'multiple') genrePairs.push({ id: 'kw:複数', name: '複数' });
+        const excludeGenrePairs = [];
         const keywordParts = uniqueStrings([keyword, ...genrePairs.map(g => g.name), format === 'vr' ? 'VR' : ''].filter(Boolean));
         const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
 
@@ -1989,7 +1985,7 @@
     }
 
     function resetConditions() {
-      sel = { format: null, duration: null };
+      sel = { format: null, workType: null, duration: null };
       tags.clear();
       specs = {};
       genreIds.clear();
