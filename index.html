@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v6</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v7</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -671,28 +671,24 @@
             <button class="pill" data-persons="複数人">👥 複数</button>
           </div>
           <div class="filter-title">ジャンル</div>
-          <div class="button-row" id="browseQuickTags">
-            <button class="pill" data-tag="素人">素人</button>
-            <button class="pill" data-tag="美少女">美少女</button>
-            <button class="pill" data-tag="人妻">人妻</button>
-            <button class="pill" data-tag="熟女">熟女</button>
-            <button class="pill" data-tag="巨乳">巨乳</button>
-            <button class="pill" data-tag="中出し">中出し</button>
-            <button class="pill" data-tag="主観">主観</button>
-            <button class="pill" data-tag="ハメ撮り">ハメ撮り</button>
-          </div>
-          <div class="filter-title">メーカー</div>
-          <div class="button-row" id="browseMakers">
-            <button class="pill" data-maker="SOD">SOD</button>
-            <button class="pill" data-maker="MOODYZ">MOODYZ</button>
-            <button class="pill" data-maker="プレステージ">プレステージ</button>
-            <button class="pill" data-maker="S1">S1</button>
-            <button class="pill" data-maker="IDEAPOCKET">IDEAPOCKET</button>
-            <button class="pill" data-maker="Madonna">Madonna</button>
+          <div class="genre-select-box" id="browseGenreBox">
+            <button class="genre-select-toggle" id="browseGenreToggle" type="button">
+              <span>ジャンルを選択 ▼</span><span class="count" id="browseGenreCount">未選択</span>
+            </button>
+            <div class="genre-select-panel">
+              <input id="browseGenreSearch" class="genre-select-search" placeholder="ジャンル名で検索（例：素人、巨乳、主観）" />
+              <div id="browseGenreSelected" class="selected-line"></div>
+              <div id="browseGenreList" class="genre-option-list"><div class="empty">ジャンル取得待ちです。</div></div>
+            </div>
           </div>
           <div class="search-box" style="margin-top:14px;">
-            <input id="browseKeyword" placeholder="キーワード・女優名で検索" />
-            <button class="primary" id="browseSearch">検索</button>
+            <div class="keyword-wrap">
+              <div class="keyword-field">
+                <input id="browseKeyword" placeholder="キーワード・女優名・ジャンル名で検索" />
+                <button class="clear-keyword" id="clearBrowseKeyword" type="button" aria-label="検索ワードを消す">×</button>
+              </div>
+              <button class="primary" id="browseSearch">検索</button>
+            </div>
           </div>
         </div>
         <div class="results-wrap">
@@ -717,7 +713,7 @@
   <div class="modal-backdrop" id="configModal">
     <div class="config-modal">
       <h2>API設定</h2>
-      <p class="hint">設定は localStorage の <b>dmm_config</b> に保存されます。API IDはDMMアフィリエイト管理画面で取得したものを入力してください。成人向けフロアは通常 <b>FANZA</b> を使います。うまくいかない場合だけ <b>DMM.R18</b> を試してください。</p>
+      <p class="hint">設定は localStorage の <b>dmm_config</b> に保存されます。API IDは初期状態で埋め込み済みです。変更したい場合だけ入力してください。成人向けフロアは通常 <b>FANZA</b> を使います。うまくいかない場合だけ <b>DMM.R18</b> を試してください。</p>
       <div class="field">
         <label for="apiId">API ID</label>
         <input id="apiId" placeholder="あなたのAPI ID" />
@@ -767,8 +763,9 @@
     const CORS_PROXY_LEGACY = 'https://corsproxy.io/?';
     const ALL_ORIGINS_RAW = 'https://api.allorigins.win/raw?url=';
     const CONFIG_KEY = 'dmm_config';
+    const UI_STATE_KEY = 'dmm_ui_state_v7';
 
-    let config = { apiId: '', affiliateId: 'koko0020-990', site: 'FANZA' };
+    let config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
     let sel = { format: null, persons: null, duration: null };
     let tags = new Set();
     let specs = {};
@@ -779,7 +776,7 @@
     let genreNameById = new Map();
     let recommendSort = 'date';
     let lastRecommendQuery = null;
-    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', persons: '', tags: new Set(), makers: new Set() };
+    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', persons: '', tags: new Set(), makers: new Set(), genreIds: new Set(), activeTab: 'recommend' };
     const currentItemsByTarget = {};
     let lightboxImages = [];
     let lightboxIndex = 0;
@@ -807,16 +804,19 @@
       try {
         const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
         config = { ...config, ...saved };
+        if (!saved.apiId) config.apiId = 'zCVL3bHPXwzBf0VsMVKg';
+        if (!saved.affiliateId) config.affiliateId = 'koko0020-990';
+        if (!saved.site) config.site = 'FANZA';
         if (!['FANZA','DMM.R18','DMM.com'].includes(config.site)) config.site = 'FANZA';
       } catch {}
-      $('apiId').value = config.apiId || '';
+      $('apiId').value = config.apiId || 'zCVL3bHPXwzBf0VsMVKg';
       $('affiliateId').value = config.affiliateId || 'koko0020-990';
       $('siteName').value = config.site || 'FANZA';
     }
 
     function saveConfig() {
       config = {
-        apiId: $('apiId').value.trim(),
+        apiId: $('apiId').value.trim() || 'zCVL3bHPXwzBf0VsMVKg',
         affiliateId: $('affiliateId').value.trim() || 'koko0020-990',
         site: $('siteName').value.trim() || 'FANZA'
       };
@@ -1017,13 +1017,7 @@
 
     function setupEvents() {
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-          btn.classList.add('active');
-          $(btn.dataset.tab).classList.add('active');
-          if (btn.dataset.tab === 'browse' && !browseState.loaded) loadBrowse();
-        });
+        btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
       });
 
       document.querySelectorAll('[data-single]').forEach(group => {
@@ -1123,6 +1117,7 @@
         browseState.page = 1;
         $('browseMode').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        saveUiState();
         loadBrowse();
       });
       $('browseFormat').addEventListener('click', e => {
@@ -1131,6 +1126,9 @@
         browseState.page = 1;
         $('browseFormat').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        browseState.genreIds.clear();
+        renderBrowseGenres();
+        saveUiState();
         loadBrowse();
       });
       $('browsePersons').addEventListener('click', e => {
@@ -1140,37 +1138,41 @@
         $('browsePersons').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         if (browseState.persons) btn.classList.add('active');
         browseState.page = 1;
+        saveUiState();
         loadBrowse();
       });
-      $('browseQuickTags').addEventListener('click', e => {
-        const btn = e.target.closest('.pill'); if (!btn) return;
-        const value = btn.dataset.tag;
-        if (browseState.tags.has(value)) { browseState.tags.delete(value); btn.classList.remove('active'); }
-        else { browseState.tags.add(value); btn.classList.add('active'); }
-        browseState.page = 1;
-        loadBrowse();
+      $('browseGenreToggle').addEventListener('click', () => {
+        $('browseGenreBox').classList.toggle('open');
+        renderBrowseGenres();
       });
-      $('browseMakers').addEventListener('click', e => {
-        const btn = e.target.closest('.pill'); if (!btn) return;
-        const value = btn.dataset.maker;
-        if (browseState.makers.has(value)) { browseState.makers.delete(value); btn.classList.remove('active'); }
-        else { browseState.makers.add(value); btn.classList.add('active'); }
-        browseState.page = 1;
-        loadBrowse();
-      });
+      $('browseGenreSearch').addEventListener('input', renderBrowseGenres);
       $('browseSearch').addEventListener('click', () => {
         browseState.keyword = $('browseKeyword').value.trim();
         browseState.page = 1;
+        saveUiState();
+        updateClearKeywordButton();
         loadBrowse();
+      });
+      $('browseKeyword').addEventListener('input', () => {
+        browseState.keyword = $('browseKeyword').value.trim();
+        updateClearKeywordButton();
       });
       $('browseKeyword').addEventListener('keydown', e => {
         if (e.key === 'Enter') $('browseSearch').click();
       });
+      $('clearBrowseKeyword').addEventListener('click', () => {
+        $('browseKeyword').value = '';
+        browseState.keyword = '';
+        browseState.page = 1;
+        updateClearKeywordButton();
+        saveUiState();
+        loadBrowse();
+      });
       document.querySelectorAll('.page-prev').forEach(btn => btn.addEventListener('click', () => {
-        if (browseState.page > 1) { browseState.page--; loadBrowse(); }
+        if (browseState.page > 1) { browseState.page--; saveUiState(); loadBrowse(); }
       }));
       document.querySelectorAll('.page-next').forEach(btn => btn.addEventListener('click', () => {
-        browseState.page++; loadBrowse();
+        browseState.page++; saveUiState(); loadBrowse();
       }));
     }
 
@@ -1189,6 +1191,7 @@
         allGenresVR = uniqueGenres(vrExtra);
         genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
         renderGenres();
+        renderBrowseGenres();
       } catch (err) {
         $('genreArea').innerHTML = `<div class="error">ジャンル取得に失敗しました。${escapeHtml(err.message)}</div>`;
       }
@@ -1207,6 +1210,135 @@
         seen.add(String(g.id));
         return true;
       });
+    }
+
+
+
+    function saveUiState() {
+      try {
+        localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+          activeTab: browseState.activeTab || 'recommend',
+          browse: {
+            mode: browseState.mode,
+            format: browseState.format,
+            page: browseState.page,
+            keyword: $('browseKeyword')?.value?.trim() || browseState.keyword || '',
+            persons: browseState.persons || '',
+            genreIds: [...browseState.genreIds]
+          }
+        }));
+      } catch {}
+    }
+
+    function loadUiState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
+        if (saved.activeTab === 'browse' || saved.activeTab === 'recommend') browseState.activeTab = saved.activeTab;
+        const b = saved.browse || {};
+        if (b.mode) browseState.mode = b.mode;
+        if (b.format) browseState.format = b.format;
+        if (b.page) browseState.page = Number(b.page) || 1;
+        if (b.keyword) browseState.keyword = b.keyword;
+        if (b.persons) browseState.persons = b.persons;
+        if (Array.isArray(b.genreIds)) browseState.genreIds = new Set(b.genreIds.map(String));
+      } catch {}
+    }
+
+    function applyUiStateToDom() {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === browseState.activeTab));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === browseState.activeTab));
+      $('browseMode')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === browseState.mode));
+      $('browseFormat')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', btn.dataset.format === browseState.format));
+      $('browsePersons')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', !!browseState.persons && btn.dataset.persons === browseState.persons));
+      if ($('browseKeyword')) $('browseKeyword').value = browseState.keyword || '';
+      updateClearKeywordButton();
+    }
+
+    function genreMatchesKeyword(keyword, format = '2d') {
+      const n = normalizeText(keyword);
+      if (!n) return [];
+      const base = format === 'vr' ? allGenresVR : allGenres2D;
+      return base.filter(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name)));
+    }
+
+    function browseSelectedGenrePairs() {
+      return [...browseState.genreIds].map(id => ({ id, name: genreNameById.get(String(id)) || '' })).filter(g => g.id);
+    }
+
+    function renderBrowseGenres() {
+      const list = browseState.format === 'vr' ? allGenresVR : allGenres2D;
+      const q = normalizeText($('browseGenreSearch')?.value || '');
+      const filtered = list.filter(g => !q || normalizeText(g.name).includes(q)).slice(0, 800);
+      const count = browseState.genreIds.size;
+      if ($('browseGenreCount')) $('browseGenreCount').textContent = count ? `${count}件選択中` : '未選択';
+      if ($('browseGenreSelected')) {
+        $('browseGenreSelected').innerHTML = [...browseState.genreIds].map(id => `<span class="chip">${escapeHtml(genreNameById.get(String(id)) || id)}<button data-browse-remove-genre="${escapeHtml(id)}">×</button></span>`).join('');
+        $('browseGenreSelected').querySelectorAll('[data-browse-remove-genre]').forEach(btn => btn.addEventListener('click', () => {
+          browseState.genreIds.delete(String(btn.dataset.browseRemoveGenre));
+          browseState.page = 1;
+          renderBrowseGenres();
+          saveUiState();
+          loadBrowse();
+        }));
+      }
+      if (!$('browseGenreList')) return;
+      if (!list.length) {
+        $('browseGenreList').innerHTML = '<div class="empty">ジャンル取得待ちです。</div>';
+        return;
+      }
+      $('browseGenreList').innerHTML = filtered.map(g => `<button type="button" class="genre-option ${browseState.genreIds.has(String(g.id)) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(g.id)}">${escapeHtml(g.name)}</button>`).join('') || '<div class="empty">該当ジャンルがありません。</div>';
+      $('browseGenreList').querySelectorAll('[data-browse-genre-id]').forEach(btn => btn.addEventListener('click', () => {
+        const id = String(btn.dataset.browseGenreId);
+        if (browseState.genreIds.has(id)) browseState.genreIds.delete(id);
+        else browseState.genreIds.add(id);
+        browseState.page = 1;
+        renderBrowseGenres();
+        saveUiState();
+        loadBrowse();
+      }));
+    }
+
+    function updateClearKeywordButton() {
+      const btn = $('clearBrowseKeyword');
+      const input = $('browseKeyword');
+      if (btn && input) btn.classList.toggle('visible', !!input.value.trim());
+    }
+
+    function setActiveTab(tabId) {
+      browseState.activeTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+      saveUiState();
+      if (tabId === 'browse' && !browseState.loaded) loadBrowse();
+    }
+
+    async function collectBrowseItems(baseParams, options = {}) {
+      const { desired = 20, genrePairs = [], keywordGenrePairs = [], keyword = '', sortNew = false } = options;
+      const out = [];
+      const seen = new Set();
+      const add = (arr) => {
+        for (const item of arr) {
+          const key = item.content_id || item.product_id || item.title;
+          if (!key || seen.has(key)) continue;
+          seen.add(key); out.push(item);
+        }
+      };
+      const fetchOne = async (params) => {
+        const json = await dmmGet('ItemList', params);
+        add(normalizeItems(json));
+      };
+      const manualGenrePairs = genrePairs.filter(g => g.id);
+      const allGenrePairs = [...manualGenrePairs, ...keywordGenrePairs.filter(g => g.id)];
+      if (allGenrePairs.length) {
+        await Promise.all(allGenrePairs.slice(0, 8).map(g => fetchOne({ ...baseParams, genre_id: g.id, offset: 1 })));
+      }
+      if (keyword || !allGenrePairs.length) {
+        const maxPages = sortNew ? 8 : 3;
+        for (let i = 0; i < maxPages && out.length < desired * 3; i++) {
+          await fetchOne({ ...baseParams, offset: 1 + i * Number(baseParams.hits || 40) });
+        }
+      }
+      return out;
     }
 
     function currentGenres() {
@@ -1332,6 +1464,12 @@
           const vrKeyword = format === 'vr' ? [keyword, 'VR'].filter(Boolean).join(' ') : keyword;
           const results = await Promise.all(selectedGenres.map(id => dmmGet('ItemList', { ...base, genre_id: id, keyword: vrKeyword })));
           items = uniqueItems(results.flatMap(normalizeItems));
+        } else if (recommendSort === 'date') {
+          items = [];
+          for (let i = 0; i < 6 && items.length < 30; i++) {
+            const json = await dmmGet('ItemList', { ...base, keyword, offset: 1 + i * Number(base.hits || 40) });
+            items = uniqueItems([...items, ...normalizeItems(json)]);
+          }
         } else {
           const json = await dmmGet('ItemList', { ...base, keyword });
           items = normalizeItems(json);
@@ -1354,33 +1492,28 @@
       return [
         $('browseKeyword').value.trim(),
         browseState.persons,
-        ...browseState.tags,
-        ...browseState.makers,
         browseState.format === 'vr' ? 'VR' : ''
       ].filter(Boolean);
     }
 
     function browseGenrePairs() {
-      const names = [browseState.persons, ...browseState.tags].filter(Boolean);
-      return names.map(name => ({ id: genreIdByName(name, browseState.format), name }));
+      const pairs = browseSelectedGenrePairs();
+      if (browseState.persons) pairs.push({ id: genreIdByName(browseState.persons, browseState.format), name: browseState.persons });
+      return pairs;
     }
 
     async function loadBrowse() {
       if (!ensureConfig()) return;
       browseState.loaded = true;
       browseState.keyword = $('browseKeyword').value.trim();
-      const offset = (browseState.page - 1) * 20 + 1;
+      updateClearKeywordButton();
       const genrePairs = browseGenrePairs();
-      const keywordParts = [
-        $('browseKeyword').value.trim(),
-        ...browseState.makers,
-        browseState.format === 'vr' ? 'VR' : ''
-      ].filter(Boolean);
-      const keyword = keywordParts.join(' ');
+      const keywordRaw = $('browseKeyword').value.trim();
+      const keywordGenrePairs = genreMatchesKeyword(keywordRaw, browseState.format).map(g => ({ id: g.id, name: g.name }));
+      const keyword = [keywordRaw, browseState.format === 'vr' ? 'VR' : ''].filter(Boolean).join(' ');
       const baseParams = applyFormatParams({
         service: 'digital',
         hits: 40,
-        offset,
         sort: browseState.mode === 'ranking' ? 'rank' : 'date',
         keyword
       }, browseState.format);
@@ -1388,42 +1521,39 @@
       $('browseStatus').textContent = '読み込み中...';
       $('browseResults').innerHTML = '';
       $('browseTitle').textContent = `${browseState.mode === 'ranking' ? '人気順' : '新着'} / ${browseState.format === 'vr' ? 'VR' : '2D'} / ${browseState.page}ページ`;
+      saveUiState();
       try {
-        let items = [];
-        const effectiveGenrePairs = genrePairs.filter(g => g.id);
-        if (effectiveGenrePairs.length) {
-          const results = await Promise.all(effectiveGenrePairs.slice(0, 3).map(g => {
-            const params = { ...baseParams, genre_id: g.id };
-            if (browseState.format === 'vr') params.keyword = [keyword, 'VR'].filter(Boolean).join(' ');
-            return dmmGet('ItemList', params);
-          }));
-          items = uniqueItems(results.flatMap(normalizeItems));
-        } else {
-          const json = await dmmGet('ItemList', baseParams);
-          items = normalizeItems(json);
-        }
-        items = filterByFormat(items, browseState.format);
+        let items = await collectBrowseItems(baseParams, {
+          desired: 80,
+          genrePairs,
+          keywordGenrePairs,
+          keyword: keywordRaw,
+          sortNew: browseState.mode === 'new'
+        });
+        items = filterByFormat(uniqueItems(items), browseState.format);
+        const strictGenrePairs = genrePairs.filter(g => g.id);
+        const looseGenreNames = genrePairs.filter(g => !g.id).map(g => g.name);
         items = applyStrictFilters(items, {
-          genrePairs: effectiveGenrePairs,
-          requiredGenreNames: genrePairs.filter(g => !g.id).map(g => g.name),
-          requiredKeywords: [...browseState.makers]
+          genrePairs: strictGenrePairs,
+          requiredGenreNames: looseGenreNames
         });
         if (browseState.mode === 'new') items = sortByDateDesc(filterFutureItems(items));
-        items = items.slice(0, 20);
-        renderCards('browseResults', items);
+        const start = (browseState.page - 1) * 20;
+        const pageItems = items.slice(start, start + 20);
+        renderCards('browseResults', pageItems);
         $('browseStatus').className = 'empty';
-        $('browseStatus').textContent = items.length ? `${items.length}件表示しています。` : '該当作品が見つかりませんでした。';
-        setPaginationDisabled(items.length);
+        $('browseStatus').textContent = pageItems.length ? `${pageItems.length}件表示しています。` : '該当作品が見つかりませんでした。条件を減らして再検索してください。';
+        setPaginationDisabled(pageItems.length, items.length);
       } catch (err) {
         $('browseStatus').className = 'error';
         $('browseStatus').textContent = '読み込みに失敗しました。' + err.message;
-        setPaginationDisabled(0);
+        setPaginationDisabled(0, 0);
       }
     }
 
-    function setPaginationDisabled(itemsLength) {
+    function setPaginationDisabled(itemsLength, totalAvailable = itemsLength) {
       document.querySelectorAll('.page-prev').forEach(btn => { btn.disabled = browseState.page <= 1; });
-      document.querySelectorAll('.page-next').forEach(btn => { btn.disabled = itemsLength < 20; });
+      document.querySelectorAll('.page-next').forEach(btn => { btn.disabled = (browseState.page * 20) >= totalAvailable || itemsLength < 20; });
     }
 
     function normalizeItems(json) {
@@ -1629,12 +1759,15 @@
       renderStaticButtons();
       setupEvents();
       loadConfig();
+      loadUiState();
+      applyUiStateToDom();
       renderSelectedChips();
       if (config.apiId) {
         await loadGenres();
-        loadBrowse();
+        if (browseState.activeTab === 'browse') loadBrowse();
       } else {
         renderGenres();
+        renderBrowseGenres();
       }
     }
 
