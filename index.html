@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v8</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v11</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -460,6 +460,15 @@
     .genre-option { border:1px solid rgba(230,0,18,.14); background:#fffafa; color:var(--text); border-radius:12px; padding:10px 11px; cursor:pointer; text-align:left; font-weight:800; min-height:42px; transition:.15s ease; }
     .genre-option:hover { background:#fff1f1; transform:translateY(-1px); }
     .genre-option.active { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; box-shadow:0 8px 18px rgba(230,0,18,.18); }
+    .genre-option-card { border:1px solid rgba(230,0,18,.14); background:#fffafa; border-radius:14px; padding:10px; display:grid; gap:8px; }
+    .genre-option-name { font-weight:900; font-size:13px; color:var(--text); }
+    .genre-choice-row { display:flex; gap:7px; }
+    .genre-choice { flex:1; border:1px solid rgba(230,0,18,.16); background:#fff; color:var(--muted); border-radius:999px; padding:7px 8px; cursor:pointer; font-weight:900; font-size:12px; }
+    .genre-choice.include.active { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; }
+    .genre-choice.exclude.active { color:#fff; background:#3a3a3a; border-color:transparent; }
+    .selected-block { margin:8px 0; }
+    .selected-label { font-size:12px; color:var(--muted); font-weight:900; margin:8px 2px 6px; }
+    .chip.exclude { background:#f3f3f3; border-color:#d8d8d8; color:#333; }
     .selected-line { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 8px; }
     .selected-line:empty { display:none; }
     .keyword-wrap { width:100%; display:flex; gap:10px; align-items:stretch; }
@@ -539,9 +548,7 @@
     <header>
       <div class="title">
         <h1>DMM 動画おすすめ検索</h1>
-        <p>条件を選んで、DMMアフィリエイトAPIから作品を検索します。GitHub Pagesで動くシングルHTML版です。</p>
       </div>
-      <button class="config-btn" id="openConfig">⚙ API設定</button>
     </header>
 
     <div class="tabs">
@@ -552,9 +559,6 @@
     <main class="panel">
       <section id="recommend" class="tab-content active">
         <div class="section">
-          <div class="notice">
-            API IDは埋め込み済みです。変更したい場合だけ右上の「API設定」から保存してください。サイト指定は <b>FANZA</b>、アフィリエイトIDは <b>koko0020-990</b> です。
-          </div>
           <div class="section-head"><h2>1. フォーマット</h2></div>
           <div class="button-row" data-single="format">
             <button class="pill" data-value="2d">📺 2D</button>
@@ -789,7 +793,7 @@
     let genreNameById = new Map();
     let recommendSort = 'date';
     let lastRecommendQuery = null;
-    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', tags: new Set(), makers: new Set(), genreIds: new Set(), activeTab: 'recommend' };
+    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', tags: new Set(), makers: new Set(), genreIds: new Set(), excludeGenreIds: new Set(), activeTab: 'recommend' };
     const currentItemsByTarget = {};
     let lightboxImages = [];
     let lightboxIndex = 0;
@@ -800,7 +804,7 @@
 
     const popularGenresBase = [
       { id: '4025', name: '単体作品' }, { id: 'kw:複数', name: '複数' }, { id: '', name: '素人' },
-      { id: 'kw:デビュー作品', name: 'デビュー作品' }, { id: 'kw:デビュー作', name: 'デビュー作' },
+      { id: 'kw:デビュー作品', name: 'デビュー作品' }, { id: 'kw:デビュー作', name: 'デビュー作' }, { id: 'kw:企画', name: '企画' },
       { id: '5001', name: '中出し' }, { id: '', name: '美少女' }, { id: '', name: '美女' },
       { id: '', name: 'ギャル' }, { id: '', name: '人妻' }, { id: '', name: '熟女' },
       { id: '', name: '巨乳' }, { id: '102', name: '美乳' }, { id: '', name: 'スレンダー' },
@@ -812,7 +816,7 @@
     function fallbackGenres(format = '2d') {
       const base = popularGenresBase.map(g => ({ ...g, id: g.id || `kw:${g.name}` }));
       return format === 'vr'
-        ? base.filter(g => /VR|8K|主観|単体|中出し|美乳|素人|制服|水着|巨乳|美女|美少女|痴女|ハメ撮り/.test(g.name))
+        ? base.filter(g => /VR|8K|主観|単体|中出し|美乳|素人|制服|水着|巨乳|美女|美少女|痴女|ハメ撮り|企画/.test(g.name))
         : base.filter(g => !/VR専用|8KVR|ハイクオリティVR/.test(g.name));
     }
 
@@ -832,32 +836,21 @@
     function $(id) { return document.getElementById(id); }
 
     function loadConfig() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-        config = { ...config, ...saved };
-        if (!saved.apiId) config.apiId = 'zCVL3bHPXwzBf0VsMVKg';
-        if (!saved.affiliateId) config.affiliateId = 'koko0020-990';
-        if (!saved.site) config.site = 'FANZA';
-        if (!['FANZA','DMM.R18','DMM.com'].includes(config.site)) config.site = 'FANZA';
-      } catch {}
-      $('apiId').value = config.apiId || 'zCVL3bHPXwzBf0VsMVKg';
-      $('affiliateId').value = config.affiliateId || 'koko0020-990';
-      $('siteName').value = config.site || 'FANZA';
+      config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      if ($('apiId')) $('apiId').value = config.apiId;
+      if ($('affiliateId')) $('affiliateId').value = config.affiliateId;
+      if ($('siteName')) $('siteName').value = config.site;
     }
 
     function saveConfig() {
-      config = {
-        apiId: $('apiId').value.trim() || 'zCVL3bHPXwzBf0VsMVKg',
-        affiliateId: $('affiliateId').value.trim() || 'koko0020-990',
-        site: $('siteName').value.trim() || 'FANZA'
-      };
+      config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
       localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
     }
 
     function ensureConfig() {
       if (!config.apiId) {
-        openConfig();
-        return false;
+        config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
       }
       return true;
     }
@@ -965,9 +958,13 @@
 
     function applyStrictFilters(items, options = {}) {
       const genrePairs = options.genrePairs || [];
+      const excludeGenrePairs = options.excludeGenrePairs || [];
       const requiredGenreNames = options.requiredGenreNames || [];
       const requiredKeywords = options.requiredKeywords || [];
       return items.filter(item => {
+        for (const pair of excludeGenrePairs) {
+          if (matchesGenreIdOrName(item, pair.id, pair.name)) return false;
+        }
         for (const pair of genrePairs) {
           if (!matchesGenreIdOrName(item, pair.id, pair.name)) return false;
         }
@@ -981,6 +978,21 @@
         }
         return true;
       });
+    }
+
+    function scoreItem(item, options = {}) {
+      const genrePairs = options.genrePairs || [];
+      const keywords = options.keywords || [];
+      let score = 0;
+      for (const pair of genrePairs) if (matchesGenreIdOrName(item, pair.id, pair.name)) score += 5;
+      const text = itemSearchText(item);
+      for (const kw of keywords) {
+        const n = normalizeText(kw);
+        if (n && text.includes(n)) score += 2;
+      }
+      if (imageUrl(item)) score += 1;
+      if (sampleImages(item).length) score += 1;
+      return score;
     }
 
     function applyFormatParams(params, format) {
@@ -1140,15 +1152,15 @@
         if (lastRecommendQuery) loadRecommend();
       });
 
-      $('openConfig').addEventListener('click', openConfig);
-      $('closeConfig').addEventListener('click', closeConfig);
-      $('saveConfig').addEventListener('click', async () => {
+      if ($('openConfig')) $('openConfig').addEventListener('click', openConfig);
+      if ($('closeConfig')) $('closeConfig').addEventListener('click', closeConfig);
+      if ($('saveConfig')) $('saveConfig').addEventListener('click', async () => {
         saveConfig();
         closeConfig();
         await loadGenres();
         loadBrowse();
       });
-      $('configModal').addEventListener('click', e => { if (e.target.id === 'configModal') closeConfig(); });
+      if ($('configModal')) $('configModal').addEventListener('click', e => { if (e.target.id === 'configModal') closeConfig(); });
       $('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') closeDetailModal(); });
       $('closeDetail').addEventListener('click', closeDetailModal);
       $('imageLightbox').addEventListener('click', e => { if (e.target.id === 'imageLightbox') closeLightbox(); });
@@ -1176,6 +1188,7 @@
         $('browseFormat').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         browseState.genreIds.clear();
+        browseState.excludeGenreIds.clear();
         renderBrowseGenres();
         saveUiState();
         loadBrowse();
@@ -1278,7 +1291,8 @@
             format: browseState.format,
             page: browseState.page,
             keyword: $('browseKeyword')?.value?.trim() || browseState.keyword || '',
-            genreIds: [...browseState.genreIds]
+            genreIds: [...browseState.genreIds],
+            excludeGenreIds: [...browseState.excludeGenreIds]
           }
         }));
       } catch {}
@@ -1294,6 +1308,7 @@
         if (b.page) browseState.page = Number(b.page) || 1;
         if (b.keyword) browseState.keyword = b.keyword;
         if (Array.isArray(b.genreIds)) browseState.genreIds = new Set(b.genreIds.map(String));
+        if (Array.isArray(b.excludeGenreIds)) browseState.excludeGenreIds = new Set(b.excludeGenreIds.map(String));
       } catch {}
     }
 
@@ -1313,12 +1328,20 @@
       return base.filter(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name))).slice(0, 8);
     }
 
-    function browseSelectedGenrePairs() {
-      return [...browseState.genreIds].map(id => {
+    function genrePairsFromSet(setObj) {
+      return [...setObj].map(id => {
         const sid = String(id);
         const name = genreNameById.get(sid) || (sid.startsWith('kw:') ? sid.slice(3) : '');
         return { id: sid.startsWith('kw:') ? '' : sid, key: sid, name };
       }).filter(g => g.key || g.id || g.name);
+    }
+
+    function browseSelectedGenrePairs() {
+      return genrePairsFromSet(browseState.genreIds);
+    }
+
+    function browseExcludedGenrePairs() {
+      return genrePairsFromSet(browseState.excludeGenreIds);
     }
 
     function renderBrowseGenres() {
@@ -1327,12 +1350,21 @@
       for (const g of list) genreNameById.set(String(g.id), g.name);
       const q = normalizeText($('browseGenreSearch')?.value || '');
       const selected = browseSelectedGenrePairs();
-      const count = browseState.genreIds.size;
-      if ($('browseGenreCount')) $('browseGenreCount').textContent = count ? `${count}件選択中` : '未選択';
+      const excluded = browseExcludedGenrePairs();
+      const count = browseState.genreIds.size + browseState.excludeGenreIds.size;
+      if ($('browseGenreCount')) $('browseGenreCount').textContent = count ? `含む${browseState.genreIds.size} / 除外${browseState.excludeGenreIds.size}` : '未選択';
       if ($('browseGenreSelected')) {
-        $('browseGenreSelected').innerHTML = selected.map(g => `<span class="chip">${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
+        const inc = selected.map(g => `<span class="chip">含む：${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
+        const exc = excluded.map(g => `<span class="chip exclude">除外：${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-exclude-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
+        $('browseGenreSelected').innerHTML = `${inc ? `<div class="selected-block"><div class="selected-label">含めるジャンル</div>${inc}</div>` : ''}${exc ? `<div class="selected-block"><div class="selected-label">除外するジャンル</div>${exc}</div>` : ''}`;
         $('browseGenreSelected').querySelectorAll('[data-browse-remove-genre]').forEach(btn => btn.addEventListener('click', () => {
           browseState.genreIds.delete(String(btn.dataset.browseRemoveGenre));
+          browseState.page = 1;
+          renderBrowseGenres();
+          saveUiState();
+        }));
+        $('browseGenreSelected').querySelectorAll('[data-browse-remove-exclude-genre]').forEach(btn => btn.addEventListener('click', () => {
+          browseState.excludeGenreIds.delete(String(btn.dataset.browseRemoveExcludeGenre));
           browseState.page = 1;
           renderBrowseGenres();
           saveUiState();
@@ -1343,9 +1375,18 @@
       const popular = fallbacks.filter(g => !q || normalizeText(g.name).includes(q));
       const all = list.filter(g => !fallbacks.some(f => normalizeText(f.name) === normalizeText(g.name)))
         .filter(g => !q || normalizeText(g.name).includes(q));
-      const renderBtn = g => `<button type="button" class="genre-option ${browseState.genreIds.has(String(g.id)) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(g.id)}" data-browse-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+      const renderBtn = g => {
+        const id = String(g.id);
+        return `<div class="genre-option-card" data-genre-card="${escapeHtml(id)}" data-genre-name="${escapeHtml(g.name)}">
+          <div class="genre-option-name">${escapeHtml(g.name)}</div>
+          <div class="genre-choice-row">
+            <button type="button" class="genre-choice include ${browseState.genreIds.has(id) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">＋ 含める</button>
+            <button type="button" class="genre-choice exclude ${browseState.excludeGenreIds.has(id) ? 'active' : ''}" data-browse-exclude-genre-id="${escapeHtml(id)}" data-browse-genre-name="${escapeHtml(g.name)}">− 除外</button>
+          </div>
+        </div>`;
+      };
       let html = '';
-      html += `<div class="genre-option-group"><div class="genre-section-title"><span>人気ジャンル</span><span>すぐ選べます</span></div><div class="genre-option-grid">${popular.map(renderBtn).join('')}</div></div>`;
+      html += `<div class="genre-option-group"><div class="genre-section-title"><span>人気ジャンル</span><span>含める／除外を選択</span></div><div class="genre-option-grid">${popular.map(renderBtn).join('')}</div></div>`;
       if (all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>すべてのジャンル</span><span>${all.length}件</span></div><div class="genre-option-grid">${all.slice(0, 180).map(renderBtn).join('')}</div></div>`;
       if (!popular.length && !all.length) html = '<div class="empty">該当ジャンルがありません。</div>';
       $('browseGenreList').innerHTML = html;
@@ -1353,8 +1394,20 @@
         const id = String(btn.dataset.browseGenreId);
         const name = String(btn.dataset.browseGenreName || '');
         if (name) genreNameById.set(id, name);
+        browseState.excludeGenreIds.delete(id);
         if (browseState.genreIds.has(id)) browseState.genreIds.delete(id);
         else browseState.genreIds.add(id);
+        browseState.page = 1;
+        renderBrowseGenres();
+        saveUiState();
+      }));
+      $('browseGenreList').querySelectorAll('[data-browse-exclude-genre-id]').forEach(btn => btn.addEventListener('click', () => {
+        const id = String(btn.dataset.browseExcludeGenreId);
+        const name = String(btn.dataset.browseGenreName || '');
+        if (name) genreNameById.set(id, name);
+        browseState.genreIds.delete(id);
+        if (browseState.excludeGenreIds.has(id)) browseState.excludeGenreIds.delete(id);
+        else browseState.excludeGenreIds.add(id);
         browseState.page = 1;
         renderBrowseGenres();
         saveUiState();
@@ -1417,7 +1470,7 @@
       const list = currentGenres();
       const q = $('genreFilter').value.trim().toLowerCase();
       if (!list.length) {
-        $('genreArea').innerHTML = '<div class="empty">ジャンル未取得です。API設定後に「ジャンル再取得」を押してください。</div>';
+        $('genreArea').innerHTML = '<div class="empty">ジャンル未取得です。「ジャンル再取得」を押してください。</div>';
         renderGenreChips();
         return;
       }
@@ -1514,7 +1567,7 @@
       const keyword = buildKeyword();
       const base = applyFormatParams({
         service: 'digital',
-        hits: format === 'vr' ? 24 : 40,
+        hits: format === 'vr' ? 40 : 50,
         sort: sortParam(recommendSort),
         ...eraParams()
       }, format);
@@ -1525,29 +1578,53 @@
       renderSelectedChips();
       try {
         let items = [];
-        const selectedGenres = [...genreIds].slice(0, 3);
-        if (selectedGenres.length) {
-          const vrKeyword = format === 'vr' ? [keyword, 'VR'].filter(Boolean).join(' ') : keyword;
-          const results = await Promise.all(selectedGenres.map(id => dmmGet('ItemList', { ...base, genre_id: id, keyword: vrKeyword })));
-          items = uniqueItems(results.flatMap(normalizeItems));
-        } else if (recommendSort === 'date') {
-          items = [];
-          for (let i = 0; i < 6 && items.length < 30; i++) {
-            const json = await dmmGet('ItemList', { ...base, keyword, offset: 1 + i * Number(base.hits || 40) });
-            items = uniqueItems([...items, ...normalizeItems(json)]);
-          }
-        } else {
-          const json = await dmmGet('ItemList', { ...base, keyword });
-          items = normalizeItems(json);
-        }
-        items = filterByFormat(items, format);
+        const selectedGenres = [...genreIds].slice(0, 6);
         const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || '' }));
-        items = applyStrictFilters(items, { genrePairs });
-        if (recommendSort === 'date') items = sortByDateDesc(filterFutureItems(items));
+        const keywordParts = uniqueStrings([keyword, ...genrePairs.map(g => g.name), format === 'vr' ? 'VR' : ''].filter(Boolean));
+        const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
+
+        for (const gp of genrePairs) {
+          if (gp.id && !String(gp.id).startsWith('kw:')) {
+            try {
+              const json = await dmmGet('ItemList', { ...base, genre_id: gp.id, keyword: keyword || undefined, offset: 1 });
+              addUnique(normalizeItems(json));
+            } catch {}
+          }
+        }
+
+        const queries = keywordParts.length ? keywordParts : [''];
+        for (const q of queries.slice(0, 8)) {
+          if (items.length > 120) break;
+          try {
+            const json = await dmmGet('ItemList', { ...base, keyword: q, offset: 1 });
+            addUnique(normalizeItems(json));
+          } catch {}
+        }
+
+        if (items.length < 8) {
+          for (let i = 0; i < 3; i++) {
+            try {
+              const json = await dmmGet('ItemList', { ...base, keyword: format === 'vr' ? 'VR' : '', offset: 1 + i * Number(base.hits || 50) });
+              addUnique(normalizeItems(json));
+            } catch {}
+          }
+        }
+
+        items = filterByFormat(uniqueItems(items), format);
+        // おすすめは完全一致で0件にしない。厳密一致が十分ある時だけ厳密化し、基本はスコア順。
+        const strict = applyStrictFilters(items, { genrePairs });
+        const pool = strict.length >= 4 ? strict : items;
+        const keywordsForScore = keywordParts.filter(k => k !== 'VR');
+        items = [...pool].sort((a, b) => {
+          const diff = scoreItem(b, { genrePairs, keywords: keywordsForScore }) - scoreItem(a, { genrePairs, keywords: keywordsForScore });
+          if (diff) return diff;
+          if (recommendSort === 'date') return Date.parse((b.date || '').replace(' ', 'T')) - Date.parse((a.date || '').replace(' ', 'T'));
+          return 0;
+        });
         items = items.slice(0, 8);
         renderCards('recommendResults', items);
-        $('recommendStatus').className = items.length ? 'empty' : 'empty';
-        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。` : '該当作品が見つかりませんでした。条件を減らして再検索してください。';
+        $('recommendStatus').className = 'empty';
+        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。条件に近い順で並べています。` : '該当作品が見つかりませんでした。条件を減らして再検索してください。';
       } catch (err) {
         $('recommendStatus').className = 'error';
         $('recommendStatus').textContent = '検索に失敗しました。' + err.message;
@@ -1571,6 +1648,7 @@
       browseState.keyword = $('browseKeyword').value.trim();
       updateClearKeywordButton();
       const genrePairs = browseGenrePairs();
+      const excludeGenrePairs = browseExcludedGenrePairs();
       const keywordRaw = $('browseKeyword').value.trim();
       const keywordGenrePairs = genreMatchesKeyword(keywordRaw, browseState.format).map(g => ({ id: g.id, name: g.name }));
       const keyword = [keywordRaw, browseState.format === 'vr' ? 'VR' : ''].filter(Boolean).join(' ');
@@ -1587,18 +1665,17 @@
       saveUiState();
       try {
         let items = await collectBrowseItems(baseParams, {
-          desired: 80,
+          desired: browseState.mode === 'new' ? 160 : 80,
           genrePairs,
           keywordGenrePairs,
           keyword: keywordRaw,
           sortNew: browseState.mode === 'new'
         });
         items = filterByFormat(uniqueItems(items), browseState.format);
-        items = applyStrictFilters(items, { genrePairs });
+        items = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
         if (browseState.mode === 'new') {
-          const recent7 = sortByDateDesc(filterRecentNewItems(items, 7));
-          const nonFuture = sortByDateDesc(filterFutureItems(items));
-          items = recent7.length ? recent7 : (nonFuture.length ? nonFuture : sortByDateDesc(items));
+          // うまく表示されていた頃の方式に戻し、APIの新着順を優先。空欄回避を最優先にする。
+          items = sortByDateDesc(items).slice(0, 60);
         }
         const start = (browseState.page - 1) * 20;
         const pageItems = items.slice(start, start + 20);
