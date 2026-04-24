@@ -1106,42 +1106,68 @@
       return Number.isFinite(age) ? age : null;
     }
 
+    function ageRangeForLabel(label) {
+      if (label === '18〜19歳') return { min: 18, max: 19 };
+      if (label === '20〜22歳') return { min: 20, max: 22 };
+      if (label === '23〜25歳') return { min: 23, max: 25 };
+      if (label === '26〜29歳') return { min: 26, max: 29 };
+      if (label === '30〜34歳') return { min: 30, max: 34 };
+      if (label === '35〜39歳') return { min: 35, max: 39 };
+      if (label === '40歳以上') return { min: 40, max: null };
+      return null;
+    }
+
+    function heightRangeForLabel(label) {
+      if (label === '〜149cm') return { min: null, max: 149 };
+      if (label === '150〜155cm') return { min: 150, max: 155 };
+      if (label === '156〜160cm') return { min: 156, max: 160 };
+      if (label === '161〜165cm') return { min: 161, max: 165 };
+      if (label === '166〜170cm') return { min: 166, max: 170 };
+      if (label === '171cm以上') return { min: 171, max: null };
+      return null;
+    }
+
+    // カップ数はDMM ActressSearchの gte_bust / lte_bust で近似する
+    function bustRangeForCupLabel(label) {
+      if (label === 'A〜B') return { min: null, max: 82 };
+      if (label === 'C〜D') return { min: 83, max: 89 };
+      if (label === 'E〜F') return { min: 90, max: 96 };
+      if (label === 'G以上') return { min: 97, max: null };
+      return null;
+    }
+
+    function mergeRanges(ranges) {
+      const valid = ranges.filter(Boolean);
+      if (!valid.length) return null;
+      const mins = valid.map(r => r.min).filter(v => Number.isFinite(v));
+      const maxes = valid.map(r => r.max).filter(v => Number.isFinite(v));
+      return {
+        min: mins.length ? Math.min(...mins) : null,
+        max: maxes.length === valid.length ? Math.max(...maxes) : null
+      };
+    }
+
     function ageInLabel(age, label) {
-      if (!Number.isFinite(age)) return false;
-      if (label === '18〜19歳') return age >= 18 && age <= 19;
-      if (label === '20〜22歳') return age >= 20 && age <= 22;
-      if (label === '23〜25歳') return age >= 23 && age <= 25;
-      if (label === '26〜29歳') return age >= 26 && age <= 29;
-      if (label === '30〜34歳') return age >= 30 && age <= 34;
-      if (label === '35〜39歳') return age >= 35 && age <= 39;
-      if (label === '40歳以上') return age >= 40;
+      const r = ageRangeForLabel(label);
+      if (!r || !Number.isFinite(age)) return false;
+      if (Number.isFinite(r.min) && age < r.min) return false;
+      if (Number.isFinite(r.max) && age > r.max) return false;
       return true;
     }
 
     function heightInLabel(height, label) {
-      if (!Number.isFinite(height)) return false;
-      if (label === '〜149cm') return height <= 149;
-      if (label === '150〜155cm') return height >= 150 && height <= 155;
-      if (label === '156〜160cm') return height >= 156 && height <= 160;
-      if (label === '161〜165cm') return height >= 161 && height <= 165;
-      if (label === '166〜170cm') return height >= 166 && height <= 170;
-      if (label === '171cm以上') return height >= 171;
+      const r = heightRangeForLabel(label);
+      if (!r || !Number.isFinite(height)) return false;
+      if (Number.isFinite(r.min) && height < r.min) return false;
+      if (Number.isFinite(r.max) && height > r.max) return false;
       return true;
     }
 
-    function cupRank(cup) {
-      const c = String(cup || '').toUpperCase().replace(/カップ|Ｃ|Cup|cup/g, '').trim();
-      const m = c.match(/[A-Z]/);
-      return m ? m[0].charCodeAt(0) - 64 : null;
-    }
-
-    function cupInLabel(cup, label) {
-      const rank = cupRank(cup);
-      if (!Number.isFinite(rank)) return false;
-      if (label === 'A〜B') return rank >= 1 && rank <= 2;
-      if (label === 'C〜D') return rank >= 3 && rank <= 4;
-      if (label === 'E〜F') return rank >= 5 && rank <= 6;
-      if (label === 'G以上') return rank >= 7;
+    function bustInCupLabel(bust, label) {
+      const r = bustRangeForCupLabel(label);
+      if (!r || !Number.isFinite(bust)) return false;
+      if (Number.isFinite(r.min) && bust < r.min) return false;
+      if (Number.isFinite(r.max) && bust > r.max) return false;
       return true;
     }
 
@@ -1150,10 +1176,75 @@
       return {
         id: String(raw?.id || raw?.actress_id || ''),
         name: raw?.name || '',
+        birthday,
         age: Number(raw?.age) || calcAgeFromBirthday(birthday),
         height: parseNumber(raw?.height),
+        bust: parseNumber(raw?.bust),
         cup: raw?.cup || raw?.cups || ''
       };
+    }
+
+    function dateOnly(d) {
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+
+    function shiftedYearDate(yearsAgo, plusDays = 0) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - yearsAgo);
+      d.setDate(d.getDate() + plusDays);
+      return dateOnly(d);
+    }
+
+    function actressSearchParamsFromSpecs() {
+      const params = { hits: 100 };
+      const ageRange = mergeRanges(selectedSpecValues('age').map(ageRangeForLabel));
+      if (ageRange) {
+        if (Number.isFinite(ageRange.max)) params.gte_birthday = shiftedYearDate(ageRange.max + 1, 1);
+        if (Number.isFinite(ageRange.min)) params.lte_birthday = shiftedYearDate(ageRange.min, 0);
+      }
+      const heightRange = mergeRanges(selectedSpecValues('height').map(heightRangeForLabel));
+      if (heightRange) {
+        if (Number.isFinite(heightRange.min)) params.gte_height = heightRange.min;
+        if (Number.isFinite(heightRange.max)) params.lte_height = heightRange.max;
+      }
+      const bustRange = mergeRanges(selectedSpecValues('cup').map(bustRangeForCupLabel));
+      if (bustRange) {
+        if (Number.isFinite(bustRange.min)) params.gte_bust = bustRange.min;
+        if (Number.isFinite(bustRange.max)) params.lte_bust = bustRange.max;
+      }
+      return params;
+    }
+
+    async function searchActressesBySpecs() {
+      if (!hasActressSpecFilters()) return [];
+      const params = actressSearchParamsFromSpecs();
+      const profiles = [];
+      for (let page = 0; page < 2; page++) {
+        try {
+          const json = await dmmGet('ActressSearch', { ...params, offset: 1 + page * Number(params.hits || 100) });
+          const result = json?.result || {};
+          const list = result.actress || result.actresses || result.items || [];
+          const arr = Array.isArray(list) ? list : [list];
+          for (const raw of arr) {
+            const prof = normalizeActressProfile(raw);
+            if (!prof.id && !prof.name) continue;
+            if (!profileMatchesSpecs(prof)) continue;
+            const key = String(prof.id || prof.name);
+            actressProfileCache.set(key, prof);
+            if (prof.name) actressProfileCache.set(prof.name, prof);
+            profiles.push(prof);
+          }
+        } catch (e) {
+          break;
+        }
+      }
+      const seen = new Set();
+      return profiles.filter(p => {
+        const key = String(p.id || p.name);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     async function getActressProfile(actress) {
@@ -1184,7 +1275,7 @@
       const cups = selectedSpecValues('cup');
       if (ages.length && !ages.some(label => ageInLabel(profile.age, label))) return false;
       if (heights.length && !heights.some(label => heightInLabel(profile.height, label))) return false;
-      if (cups.length && !cups.some(label => cupInLabel(profile.cup, label))) return false;
+      if (cups.length && !cups.some(label => bustInCupLabel(profile.bust, label))) return false;
       return true;
     }
 
@@ -1842,6 +1933,18 @@
           }
         };
 
+        // 年齢・身長・バスト条件がある場合は、先にActressSearchで候補女優を取得してから作品を拾う。
+        // ItemListだけで後判定すると年齢などが不安定なので、ActressSearchの
+        // gte_birthday / lte_birthday / gte_height / lte_height / gte_bust / lte_bust を起点にする。
+        const actressCandidates = await searchActressesBySpecs();
+        if (actressCandidates.length) {
+          for (const actress of actressCandidates.slice(0, 35)) {
+            if (items.length > 320) break;
+            if (actress.id) await fetchItemList({ ...base, article: 'actress', article_id: actress.id, keyword: keyword || undefined }, 1);
+            if (items.length < 180 && actress.name) await fetchItemList({ ...base, keyword: [actress.name, keyword].filter(Boolean).join(' ') }, 1);
+          }
+        }
+
         // ジャンルIDがある場合は各ジャンルで複数ページ取得し、あとでAND条件として厳密に絞る。
         for (const gp of genrePairs) {
           if (gp.id && !String(gp.id).startsWith('kw:')) {
@@ -1878,7 +1981,7 @@
 
         renderCards('recommendResults', items);
         $('recommendStatus').className = 'empty';
-        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。選択した必須条件に合う作品を優先しています。` : '該当作品が見つかりませんでした。年齢・身長・カップ数・ジャンルなどの条件を少し広げて再検索してください。';
+        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。選択した必須条件に合う作品を優先しています。` : '該当作品が見つかりませんでした。年齢・身長・バスト目安・ジャンルなどの条件を少し広げて再検索してください。';
       } catch (err) {
         $('recommendStatus').className = 'error';
         $('recommendStatus').textContent = '検索に失敗しました。' + err.message;
