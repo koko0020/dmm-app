@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v11</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v17</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -489,6 +489,38 @@
     .fixed-genre-btn:hover { background:#fff1f1; }
     .fixed-genre-btn.active.include { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; }
     .fixed-genre-btn.active.exclude { color:#fff; background:#3a3a3a; border-color:transparent; }
+
+    .recommend-genre-box {
+      max-height:none;
+      overflow:visible;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      border:0;
+      background:transparent;
+      padding:0;
+    }
+    .recommend-genre-box .fixed-genre-btn {
+      text-align:center;
+      width:auto;
+      min-width:104px;
+      padding:10px 14px;
+      border-radius:999px;
+    }
+
+    .recommend-genre-buttons {
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:10px;
+    }
+    .recommend-genre-buttons .pill {
+      width:auto;
+      min-width:104px;
+      flex:0 0 auto;
+      justify-content:center;
+    }
+
     .release-picker { width:100%; min-height:46px; border:1px solid rgba(230,0,18,.16); border-radius:14px; background:#fff; padding:10px 12px; font-weight:800; color:var(--text); outline:none; }
     .release-picker option { padding:8px; border-radius:8px; }
     @media (max-width:760px){ .genre-condition-grid{ grid-template-columns:1fr; } .fixed-genre-box{ grid-template-columns:1fr; } }
@@ -603,30 +635,33 @@
             <div class="mini-box">
               <h4>年齢</h4>
               <div class="button-row" data-spec="age">
-                <button class="pill" data-value="18歳 19歳">18〜19歳</button>
-                <button class="pill" data-value="20歳 21歳 22歳">20〜22歳</button>
-                <button class="pill" data-value="23歳 24歳 25歳">23〜25歳</button>
-                <button class="pill" data-value="26歳 27歳 28歳 29歳">26〜29歳</button>
-                <button class="pill" data-value="30歳 31歳 32歳 33歳 34歳">30〜34歳</button>
-                <button class="pill" data-value="35歳 36歳 37歳 38歳 39歳">35〜39歳</button>
-                <button class="pill" data-value="40代以上 40歳">40歳以上</button>
+                <button class="pill" data-value="18〜19歳">18〜19歳</button>
+                <button class="pill" data-value="20〜22歳">20〜22歳</button>
+                <button class="pill" data-value="23〜25歳">23〜25歳</button>
+                <button class="pill" data-value="26〜29歳">26〜29歳</button>
+                <button class="pill" data-value="30〜34歳">30〜34歳</button>
+                <button class="pill" data-value="35〜39歳">35〜39歳</button>
+                <button class="pill" data-value="40歳以上">40歳以上</button>
               </div>
             </div>
             <div class="mini-box">
               <h4>カップ数</h4>
               <div class="button-row" data-spec="cup">
-                <button class="pill" data-value="Aカップ Bカップ">A〜B</button>
-                <button class="pill" data-value="Cカップ Dカップ">C〜D</button>
-                <button class="pill" data-value="Eカップ Fカップ">E〜F</button>
-                <button class="pill" data-value="Gカップ 巨乳">G以上</button>
+                <button class="pill" data-value="A〜B">A〜B</button>
+                <button class="pill" data-value="C〜D">C〜D</button>
+                <button class="pill" data-value="E〜F">E〜F</button>
+                <button class="pill" data-value="G以上">G以上</button>
               </div>
             </div>
             <div class="mini-box">
               <h4>身長</h4>
               <div class="button-row" data-spec="height">
-                <button class="pill" data-value="低身長">低身長</button>
-                <button class="pill" data-value="普通">普通</button>
-                <button class="pill" data-value="高身長">高身長</button>
+                <button class="pill" data-value="〜149cm">〜149cm</button>
+                <button class="pill" data-value="150〜155cm">150〜155cm</button>
+                <button class="pill" data-value="156〜160cm">156〜160cm</button>
+                <button class="pill" data-value="161〜165cm">161〜165cm</button>
+                <button class="pill" data-value="166〜170cm">166〜170cm</button>
+                <button class="pill" data-value="171cm以上">171cm以上</button>
               </div>
             </div>
           </div>
@@ -636,17 +671,13 @@
           <div class="section-head">
             <div>
               <h2>3. ジャンル</h2>
-              <p class="hint">おすすめ検索は固定ジャンルから選択します。</p>
+              <p class="hint">作品分類系のジャンルだけを選択します。</p>
             </div>
           </div>
-          <div class="genre-condition-grid">
-            <div class="genre-pane">
-              <h4>ジャンルを選択</h4>
-              <p class="hint">選んだジャンルをすべて含む作品を優先します。</p>
-              <input id="includeGenreFilter" class="genre-pane-search" placeholder="ジャンルを検索" />
-              <div id="includeGenreChips" class="chips"></div>
-              <div id="includeGenreBox" class="fixed-genre-box"></div>
-            </div>
+          <div class="genre-pane">
+            <h4>ジャンル</h4>
+            <p class="hint">作品分類系のみ。単体／複数は上のフォーマット欄で選べます。</p>
+            <div id="includeGenreBox" class="button-row recommend-genre-buttons"></div>
           </div>
         </div>
 
@@ -849,6 +880,7 @@
     const currentItemsByTarget = {};
     let lightboxImages = [];
     let lightboxIndex = 0;
+    const actressProfileCache = new Map();
 
     const situationTags = ['NTR','ドラマ','素人','ハメ撮り','企画','痴女','M男','ハーレム','子作り','先生 生徒','上司','家庭教師','彼女','友達','セフレ','温泉','銭湯','メンエス','ピンサロ','ソープ','制服','水着','主観','天井特化'];
     const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人'];
@@ -1049,6 +1081,129 @@
       return score;
     }
 
+    function selectedSpecValues(key) {
+      return Array.isArray(specs[key]) ? specs[key] : (specs[key] ? [specs[key]] : []);
+    }
+
+    function hasActressSpecFilters() {
+      return selectedSpecValues('age').length || selectedSpecValues('height').length || selectedSpecValues('cup').length;
+    }
+
+    function parseNumber(value) {
+      const m = String(value || '').match(/\d+/);
+      return m ? Number(m[0]) : null;
+    }
+
+    function calcAgeFromBirthday(birthday) {
+      if (!birthday) return null;
+      const m = String(birthday).match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
+      if (!m) return null;
+      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+      const now = new Date();
+      let age = now.getFullYear() - y;
+      const beforeBirthday = (now.getMonth() + 1 < mo) || (now.getMonth() + 1 === mo && now.getDate() < d);
+      if (beforeBirthday) age--;
+      return Number.isFinite(age) ? age : null;
+    }
+
+    function ageInLabel(age, label) {
+      if (!Number.isFinite(age)) return false;
+      if (label === '18〜19歳') return age >= 18 && age <= 19;
+      if (label === '20〜22歳') return age >= 20 && age <= 22;
+      if (label === '23〜25歳') return age >= 23 && age <= 25;
+      if (label === '26〜29歳') return age >= 26 && age <= 29;
+      if (label === '30〜34歳') return age >= 30 && age <= 34;
+      if (label === '35〜39歳') return age >= 35 && age <= 39;
+      if (label === '40歳以上') return age >= 40;
+      return true;
+    }
+
+    function heightInLabel(height, label) {
+      if (!Number.isFinite(height)) return false;
+      if (label === '〜149cm') return height <= 149;
+      if (label === '150〜155cm') return height >= 150 && height <= 155;
+      if (label === '156〜160cm') return height >= 156 && height <= 160;
+      if (label === '161〜165cm') return height >= 161 && height <= 165;
+      if (label === '166〜170cm') return height >= 166 && height <= 170;
+      if (label === '171cm以上') return height >= 171;
+      return true;
+    }
+
+    function cupRank(cup) {
+      const c = String(cup || '').toUpperCase().replace(/カップ|Ｃ|Cup|cup/g, '').trim();
+      const m = c.match(/[A-Z]/);
+      return m ? m[0].charCodeAt(0) - 64 : null;
+    }
+
+    function cupInLabel(cup, label) {
+      const rank = cupRank(cup);
+      if (!Number.isFinite(rank)) return false;
+      if (label === 'A〜B') return rank >= 1 && rank <= 2;
+      if (label === 'C〜D') return rank >= 3 && rank <= 4;
+      if (label === 'E〜F') return rank >= 5 && rank <= 6;
+      if (label === 'G以上') return rank >= 7;
+      return true;
+    }
+
+    function normalizeActressProfile(raw) {
+      const birthday = raw?.birthday || raw?.birth || raw?.date_of_birth || '';
+      return {
+        id: String(raw?.id || raw?.actress_id || ''),
+        name: raw?.name || '',
+        age: Number(raw?.age) || calcAgeFromBirthday(birthday),
+        height: parseNumber(raw?.height),
+        cup: raw?.cup || raw?.cups || ''
+      };
+    }
+
+    async function getActressProfile(actress) {
+      const key = String(actress?.id || actress?.name || '').trim();
+      if (!key) return null;
+      if (actressProfileCache.has(key)) return actressProfileCache.get(key);
+      const params = { hits: 1 };
+      if (actress.id) params.actress_id = actress.id;
+      else if (actress.name) params.keyword = actress.name;
+      let profile = null;
+      try {
+        const json = await dmmGet('ActressSearch', params);
+        const result = json?.result || {};
+        const list = result.actress || result.actresses || result.items || [];
+        const raw = Array.isArray(list) ? list[0] : list;
+        if (raw) profile = normalizeActressProfile(raw);
+      } catch (e) {
+        profile = null;
+      }
+      actressProfileCache.set(key, profile);
+      return profile;
+    }
+
+    function profileMatchesSpecs(profile) {
+      if (!profile) return false;
+      const ages = selectedSpecValues('age');
+      const heights = selectedSpecValues('height');
+      const cups = selectedSpecValues('cup');
+      if (ages.length && !ages.some(label => ageInLabel(profile.age, label))) return false;
+      if (heights.length && !heights.some(label => heightInLabel(profile.height, label))) return false;
+      if (cups.length && !cups.some(label => cupInLabel(profile.cup, label))) return false;
+      return true;
+    }
+
+    async function filterByActressSpecs(items) {
+      if (!hasActressSpecFilters()) return items;
+      const checked = [];
+      const source = items.slice(0, 90);
+      for (const item of source) {
+        const actresses = item.iteminfo?.actress || [];
+        let ok = false;
+        for (const actress of actresses.slice(0, 4)) {
+          const profile = await getActressProfile(actress);
+          if (profileMatchesSpecs(profile)) { ok = true; break; }
+        }
+        if (ok) checked.push(item);
+      }
+      return checked;
+    }
+
     function applyFormatParams(params, format) {
       const next = { ...params, floor: 'videoa' };
       if (format === 'vr' && !next.genre_id) next.genre_id = '6793';
@@ -1159,14 +1314,17 @@
           const btn = e.target.closest('.pill');
           if (!btn) return;
           const key = group.dataset.spec;
-          if (specs[key] === btn.dataset.value) {
-            delete specs[key];
+          const value = btn.dataset.value;
+          const current = new Set(Array.isArray(specs[key]) ? specs[key] : (specs[key] ? [specs[key]] : []));
+          if (current.has(value)) {
+            current.delete(value);
             btn.classList.remove('active');
           } else {
-            specs[key] = btn.dataset.value;
-            group.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+            current.add(value);
             btn.classList.add('active');
           }
+          if (current.size) specs[key] = [...current];
+          else delete specs[key];
           renderSelectedChips();
         });
       });
@@ -1516,20 +1674,20 @@
     }
 
     function fixedRecommendGenres() {
-      const format = sel.format || '2d';
-      return fallbackGenres(format);
+      const names = ['素人', '企画', 'デビュー作品', '独占配信'];
+      const byName = new Map(popularGenresBase.map(g => [normalizeText(g.name), { ...g, id: g.id || `kw:${g.name}` }]));
+      return names.map(name => byName.get(normalizeText(name)) || { id: `kw:${name}`, name });
     }
 
     function renderGenres() {
       const list = fixedRecommendGenres();
       for (const g of list) genreNameById.set(String(g.id), g.name);
-      const q = normalizeText($('includeGenreFilter')?.value || '');
-      const filtered = list.filter(g => !q || normalizeText(g.name).includes(q));
+      const filtered = list;
       if ($('includeGenreBox')) {
         $('includeGenreBox').innerHTML = filtered.map(g => {
           const id = String(g.id);
           const active = genreIds.has(id);
-          return `<button type="button" class="fixed-genre-btn ${active ? 'active include' : ''}" data-rec-genre-id="${escapeHtml(id)}" data-rec-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+          return `<button type="button" class="pill ${active ? 'active' : ''}" data-rec-genre-id="${escapeHtml(id)}" data-rec-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
         }).join('') || '<div class="empty">該当ジャンルがありません。</div>';
         $('includeGenreBox').querySelectorAll('[data-rec-genre-id]').forEach(btn => btn.addEventListener('click', () => {
           const id = String(btn.dataset.recGenreId);
@@ -1570,7 +1728,7 @@
       if (sel.workType) labels.push(sel.workType === 'single' ? '単体作品' : '複数');
       const release = releaseDateLabel();
       if (release) labels.push(release);
-      Object.values(specs).forEach(v => labels.push(v));
+      Object.values(specs).forEach(v => (Array.isArray(v) ? v : [v]).forEach(x => labels.push(x)));
       tags.forEach(v => labels.push(v));
       makerTags.forEach(v => labels.push(v));
       genreIds.forEach(id => labels.push('含む:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
@@ -1585,7 +1743,11 @@
 
     function buildKeyword() {
       const parts = [];
-      Object.entries(specs).forEach(([k, v]) => { if (k !== 'era') parts.push(v); });
+      // 年齢・身長・カップ数は女優プロフィールAPIで判定するため、キーワードには混ぜない
+      Object.entries(specs).forEach(([k, v]) => {
+        if (k === 'era' || k === 'age' || k === 'height' || k === 'cup') return;
+        (Array.isArray(v) ? v : [v]).forEach(x => parts.push(x));
+      });
       tags.forEach(v => parts.push(v));
       makerTags.forEach(v => parts.push(v));
       const free = $('recommendKeyword').value.trim();
@@ -1694,6 +1856,7 @@
         }
 
         items = filterByFormat(uniqueItems(items), format);
+        items = await filterByActressSpecs(items);
         // おすすめは完全一致で0件にしない。厳密一致が十分ある時だけ厳密化し、基本はスコア順。
         items = applyStrictFilters(items, { excludeGenrePairs });
         const strict = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
