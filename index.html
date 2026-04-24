@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v7</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v8</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -445,6 +445,32 @@
     .pagination-bottom { margin-top: 18px; justify-content: center; }
 
     @media (max-width: 640px) { .lightbox-nav { width: 40px; height: 40px; font-size: 24px; } .lightbox-nav.prev { left: 4px; } .lightbox-nav.next { right: 4px; } }
+
+    /* v8 genre picker / search clear refinements */
+    .genre-select-box { position: relative; max-width: 760px; }
+    .genre-select-toggle { width:100%; border:1px solid rgba(230,0,18,.18); background:#fff; color:var(--text); border-radius:16px; padding:14px 15px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; box-shadow:0 8px 20px rgba(180,0,20,.06); font-weight:900; }
+    .genre-select-toggle .count { color:var(--accent); background:#fff1f1; border:1px solid rgba(230,0,18,.14); border-radius:999px; padding:5px 10px; font-size:12px; white-space:nowrap; }
+    .genre-select-panel { display:none; margin-top:10px; border:1px solid rgba(230,0,18,.16); background:#fff; border-radius:18px; padding:14px; box-shadow:0 18px 40px rgba(80,0,10,.12); }
+    .genre-select-box.open .genre-select-panel { display:block; }
+    .genre-select-search { width:100%; border:1px solid rgba(230,0,18,.16); background:#fffafa; color:var(--text); border-radius:999px; padding:12px 15px; outline:none; margin-bottom:12px; }
+    .genre-section-title { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.02em; margin:12px 2px 8px; }
+    .genre-option-list { display:grid; gap:14px; max-height:430px; overflow:auto; padding-right:3px; }
+    .genre-option-group { display:grid; gap:8px; }
+    .genre-option-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .genre-option { border:1px solid rgba(230,0,18,.14); background:#fffafa; color:var(--text); border-radius:12px; padding:10px 11px; cursor:pointer; text-align:left; font-weight:800; min-height:42px; transition:.15s ease; }
+    .genre-option:hover { background:#fff1f1; transform:translateY(-1px); }
+    .genre-option.active { color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; box-shadow:0 8px 18px rgba(230,0,18,.18); }
+    .selected-line { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 8px; }
+    .selected-line:empty { display:none; }
+    .keyword-wrap { width:100%; display:flex; gap:10px; align-items:stretch; }
+    .keyword-field { flex:1; position:relative; min-width:240px; }
+    .keyword-field input { width:100%; padding-right:46px; }
+    .clear-keyword { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border:0; border-radius:50%; background:#fff1f1; color:var(--accent); font-weight:900; cursor:pointer; display:none; line-height:1; box-shadow:inset 0 0 0 1px rgba(230,0,18,.12); }
+    .clear-keyword.visible { display:grid; place-items:center; }
+    .thumb.detail-thumb { cursor:pointer; border:0; width:100%; }
+    @media (max-width:760px){ .genre-option-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .keyword-wrap{ flex-direction:column; } }
+    @media (max-width:460px){ .genre-option-grid{ grid-template-columns:1fr; } }
+
     .filter-title { font-size: 13px; color: var(--muted); font-weight: 800; margin: 14px 0 8px; }
 
     .notice {
@@ -678,7 +704,7 @@
             <div class="genre-select-panel">
               <input id="browseGenreSearch" class="genre-select-search" placeholder="ジャンル名で検索（例：素人、巨乳、主観）" />
               <div id="browseGenreSelected" class="selected-line"></div>
-              <div id="browseGenreList" class="genre-option-list"><div class="empty">ジャンル取得待ちです。</div></div>
+              <div id="browseGenreList" class="genre-option-list"></div>
             </div>
           </div>
           <div class="search-box" style="margin-top:14px;">
@@ -763,7 +789,7 @@
     const CORS_PROXY_LEGACY = 'https://corsproxy.io/?';
     const ALL_ORIGINS_RAW = 'https://api.allorigins.win/raw?url=';
     const CONFIG_KEY = 'dmm_config';
-    const UI_STATE_KEY = 'dmm_ui_state_v7';
+    const UI_STATE_KEY = 'dmm_ui_state_v8';
 
     let config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
     let sel = { format: null, persons: null, duration: null };
@@ -784,6 +810,23 @@
     const situationTags = ['NTR','ドラマ','素人','ハメ撮り','企画','痴女','M男','ハーレム','子作り','先生 生徒','上司','家庭教師','彼女','友達','セフレ','温泉','銭湯','メンエス','ピンサロ','ソープ','制服','水着','主観','天井特化'];
     const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人'];
     const makerList = ['SOD','MOODYZ','Madonna','イエローバナナ','プレステージ','S1','エスワン','IDEAPOCKET','専属','kawaii','E-BODY','Faleno','RUBY','V&R','マックスA','ムーディーズ','TMA','WANZ','KMP','ダスッ！','アリスJAPAN','DMMオリジナル','bibian','ナチュラルハイ'];
+
+    const popularGenresBase = [
+      { id: '4025', name: '単体作品' }, { id: '', name: '複数人' }, { id: '', name: '素人' },
+      { id: '5001', name: '中出し' }, { id: '', name: '美少女' }, { id: '', name: '美女' },
+      { id: '', name: 'ギャル' }, { id: '', name: '人妻' }, { id: '', name: '熟女' },
+      { id: '', name: '巨乳' }, { id: '102', name: '美乳' }, { id: '', name: 'スレンダー' },
+      { id: '', name: '痴女' }, { id: '', name: 'NTR' }, { id: '', name: 'ハメ撮り' },
+      { id: '', name: '制服' }, { id: '', name: '水着' }, { id: '5063', name: '主観' },
+      { id: '6793', name: 'VR専用' }, { id: '307935', name: '8KVR' }, { id: '6925', name: 'ハイクオリティVR' }
+    ];
+
+    function fallbackGenres(format = '2d') {
+      const base = popularGenresBase.map(g => ({ ...g, id: g.id || `kw:${g.name}` }));
+      return format === 'vr'
+        ? base.filter(g => /VR|8K|主観|単体|中出し|美乳|素人|制服|水着|巨乳|美女|美少女|痴女|ハメ撮り/.test(g.name))
+        : base.filter(g => !/VR専用|8KVR|ハイクオリティVR/.test(g.name));
+    }
 
     const genreCategories = [
       { name: '女優タイプ', keys: ['美少女','美女','ギャル','人妻','熟女','お姉さん','アイドル','女子校生','女子大生','OL','素人'] },
@@ -908,10 +951,10 @@
 
     function genreIdByName(name, format = '2d') {
       const n = normalizeText(name);
-      const list = format === 'vr' ? [...allGenresVR, ...allGenres2D] : allGenres2D;
+      const list = format === 'vr' ? [...allGenresVR, ...allGenres2D, ...fallbackGenres('vr')] : [...allGenres2D, ...fallbackGenres('2d')];
       let hit = list.find(g => normalizeText(g.name) === n);
       if (!hit) hit = list.find(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name)));
-      return hit?.id || '';
+      return hit?.id || `kw:${name}`;
     }
 
     function applyStrictFilters(items, options = {}) {
@@ -1178,6 +1221,11 @@
 
     async function loadGenres() {
       if (!ensureConfig()) return;
+      allGenres2D = allGenres2D.length ? allGenres2D : fallbackGenres('2d');
+      allGenresVR = allGenresVR.length ? allGenresVR : fallbackGenres('vr');
+      genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
+      renderGenres();
+      renderBrowseGenres();
       $('genreArea').innerHTML = '<div class="loading">ジャンルを取得中...</div>';
       try {
         const g2d = await dmmGet('GenreSearch', { service: 'digital', floor: 'videoa' });
@@ -1193,14 +1241,25 @@
         renderGenres();
         renderBrowseGenres();
       } catch (err) {
-        $('genreArea').innerHTML = `<div class="error">ジャンル取得に失敗しました。${escapeHtml(err.message)}</div>`;
+        allGenres2D = fallbackGenres('2d');
+        allGenresVR = fallbackGenres('vr');
+        genreNameById = new Map([...allGenres2D, ...allGenresVR].map(g => [String(g.id), g.name]));
+        renderGenres();
+        renderBrowseGenres();
+        $('genreArea').insertAdjacentHTML('afterbegin', `<div class="notice">ジャンルAPIの取得に失敗したため、固定の人気ジャンルを表示しています。</div>`);
       }
     }
 
     function normalizeGenres(json) {
       const arr = json?.result?.genre || json?.result?.genres || [];
-      return arr.map(g => ({ id: String(g.genre_id || g.id || ''), name: g.name || g.genre_name || '' }))
+      const apiGenres = arr.map(g => ({ id: String(g.genre_id || g.id || ''), name: g.name || g.genre_name || '' }))
         .filter(g => g.id && g.name);
+      const merged = [...apiGenres];
+      for (const fg of fallbackGenres('2d')) {
+        const hit = apiGenres.find(g => normalizeText(g.name) === normalizeText(fg.name));
+        merged.push(hit || fg);
+      }
+      return uniqueGenres(merged);
     }
 
     function uniqueGenres(genres) {
@@ -1257,44 +1316,55 @@
     function genreMatchesKeyword(keyword, format = '2d') {
       const n = normalizeText(keyword);
       if (!n) return [];
-      const base = format === 'vr' ? allGenresVR : allGenres2D;
-      return base.filter(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name)));
+      const base = uniqueGenres([...(format === 'vr' ? allGenresVR : allGenres2D), ...fallbackGenres(format)]);
+      return base.filter(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name))).slice(0, 8);
     }
 
     function browseSelectedGenrePairs() {
-      return [...browseState.genreIds].map(id => ({ id, name: genreNameById.get(String(id)) || '' })).filter(g => g.id);
+      return [...browseState.genreIds].map(id => {
+        const sid = String(id);
+        const name = genreNameById.get(sid) || (sid.startsWith('kw:') ? sid.slice(3) : '');
+        return { id: sid.startsWith('kw:') ? '' : sid, key: sid, name };
+      }).filter(g => g.key || g.id || g.name);
     }
 
     function renderBrowseGenres() {
-      const list = browseState.format === 'vr' ? allGenresVR : allGenres2D;
+      const apiList = browseState.format === 'vr' ? allGenresVR : allGenres2D;
+      const list = uniqueGenres([...fallbackGenres(browseState.format), ...apiList]);
+      for (const g of list) genreNameById.set(String(g.id), g.name);
       const q = normalizeText($('browseGenreSearch')?.value || '');
-      const filtered = list.filter(g => !q || normalizeText(g.name).includes(q)).slice(0, 800);
+      const selected = browseSelectedGenrePairs();
       const count = browseState.genreIds.size;
       if ($('browseGenreCount')) $('browseGenreCount').textContent = count ? `${count}件選択中` : '未選択';
       if ($('browseGenreSelected')) {
-        $('browseGenreSelected').innerHTML = [...browseState.genreIds].map(id => `<span class="chip">${escapeHtml(genreNameById.get(String(id)) || id)}<button data-browse-remove-genre="${escapeHtml(id)}">×</button></span>`).join('');
+        $('browseGenreSelected').innerHTML = selected.map(g => `<span class="chip">${escapeHtml(g.name || g.key || g.id)}<button data-browse-remove-genre="${escapeHtml(g.key || g.id)}">×</button></span>`).join('');
         $('browseGenreSelected').querySelectorAll('[data-browse-remove-genre]').forEach(btn => btn.addEventListener('click', () => {
           browseState.genreIds.delete(String(btn.dataset.browseRemoveGenre));
           browseState.page = 1;
           renderBrowseGenres();
           saveUiState();
-          loadBrowse();
         }));
       }
       if (!$('browseGenreList')) return;
-      if (!list.length) {
-        $('browseGenreList').innerHTML = '<div class="empty">ジャンル取得待ちです。</div>';
-        return;
-      }
-      $('browseGenreList').innerHTML = filtered.map(g => `<button type="button" class="genre-option ${browseState.genreIds.has(String(g.id)) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(g.id)}">${escapeHtml(g.name)}</button>`).join('') || '<div class="empty">該当ジャンルがありません。</div>';
+      const fallbacks = fallbackGenres(browseState.format);
+      const popular = fallbacks.filter(g => !q || normalizeText(g.name).includes(q));
+      const all = list.filter(g => !fallbacks.some(f => normalizeText(f.name) === normalizeText(g.name)))
+        .filter(g => !q || normalizeText(g.name).includes(q));
+      const renderBtn = g => `<button type="button" class="genre-option ${browseState.genreIds.has(String(g.id)) ? 'active' : ''}" data-browse-genre-id="${escapeHtml(g.id)}" data-browse-genre-name="${escapeHtml(g.name)}">${escapeHtml(g.name)}</button>`;
+      let html = '';
+      html += `<div class="genre-option-group"><div class="genre-section-title"><span>人気ジャンル</span><span>すぐ選べます</span></div><div class="genre-option-grid">${popular.map(renderBtn).join('')}</div></div>`;
+      if (all.length) html += `<div class="genre-option-group"><div class="genre-section-title"><span>すべてのジャンル</span><span>${all.length}件</span></div><div class="genre-option-grid">${all.slice(0, 180).map(renderBtn).join('')}</div></div>`;
+      if (!popular.length && !all.length) html = '<div class="empty">該当ジャンルがありません。</div>';
+      $('browseGenreList').innerHTML = html;
       $('browseGenreList').querySelectorAll('[data-browse-genre-id]').forEach(btn => btn.addEventListener('click', () => {
         const id = String(btn.dataset.browseGenreId);
+        const name = String(btn.dataset.browseGenreName || '');
+        if (name) genreNameById.set(id, name);
         if (browseState.genreIds.has(id)) browseState.genreIds.delete(id);
         else browseState.genreIds.add(id);
         browseState.page = 1;
         renderBrowseGenres();
         saveUiState();
-        loadBrowse();
       }));
     }
 
@@ -1327,15 +1397,20 @@
         const json = await dmmGet('ItemList', params);
         add(normalizeItems(json));
       };
-      const manualGenrePairs = genrePairs.filter(g => g.id);
-      const allGenrePairs = [...manualGenrePairs, ...keywordGenrePairs.filter(g => g.id)];
+      const manualGenrePairs = genrePairs.filter(g => g.id && !String(g.id).startsWith('kw:'));
+      const allGenrePairs = [...manualGenrePairs, ...keywordGenrePairs.filter(g => g.id && !String(g.id).startsWith('kw:'))];
       if (allGenrePairs.length) {
         await Promise.all(allGenrePairs.slice(0, 8).map(g => fetchOne({ ...baseParams, genre_id: g.id, offset: 1 })));
       }
-      if (keyword || !allGenrePairs.length) {
-        const maxPages = sortNew ? 8 : 3;
-        for (let i = 0; i < maxPages && out.length < desired * 3; i++) {
-          await fetchOne({ ...baseParams, offset: 1 + i * Number(baseParams.hits || 40) });
+      const nameKeywords = [...genrePairs, ...keywordGenrePairs].map(g => g.name).filter(Boolean);
+      const keywordQueries = uniqueStrings([keyword, ...nameKeywords]).filter(Boolean).slice(0, 6);
+      if (keywordQueries.length || !allGenrePairs.length) {
+        const maxPages = sortNew ? 10 : 4;
+        for (const kw of (keywordQueries.length ? keywordQueries : [''])) {
+          for (let i = 0; i < maxPages && out.length < desired * 4; i++) {
+            const mergedKeyword = [kw, baseParams.keyword && !normalizeText(baseParams.keyword).includes(normalizeText(kw)) ? baseParams.keyword : ''].filter(Boolean).join(' ');
+            await fetchOne({ ...baseParams, keyword: mergedKeyword, offset: 1 + i * Number(baseParams.hits || 40) });
+          }
         }
       }
       return out;
@@ -1511,11 +1586,15 @@
       const keywordRaw = $('browseKeyword').value.trim();
       const keywordGenrePairs = genreMatchesKeyword(keywordRaw, browseState.format).map(g => ({ id: g.id, name: g.name }));
       const keyword = [keywordRaw, browseState.format === 'vr' ? 'VR' : ''].filter(Boolean).join(' ');
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      const todayParam = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}T23:59:59`;
       const baseParams = applyFormatParams({
         service: 'digital',
         hits: 40,
         sort: browseState.mode === 'ranking' ? 'rank' : 'date',
-        keyword
+        keyword,
+        ...(browseState.mode === 'new' ? { lte_date: todayParam } : {})
       }, browseState.format);
       $('browseStatus').className = 'loading';
       $('browseStatus').textContent = '読み込み中...';
@@ -1531,13 +1610,12 @@
           sortNew: browseState.mode === 'new'
         });
         items = filterByFormat(uniqueItems(items), browseState.format);
-        const strictGenrePairs = genrePairs.filter(g => g.id);
-        const looseGenreNames = genrePairs.filter(g => !g.id).map(g => g.name);
-        items = applyStrictFilters(items, {
-          genrePairs: strictGenrePairs,
-          requiredGenreNames: looseGenreNames
-        });
-        if (browseState.mode === 'new') items = sortByDateDesc(filterFutureItems(items));
+        const strictGenrePairs = genrePairs.filter(g => g.id && !String(g.id).startsWith('kw:'));
+        items = applyStrictFilters(items, { genrePairs: strictGenrePairs });
+        if (browseState.mode === 'new') {
+          const nonFuture = sortByDateDesc(filterFutureItems(items));
+          items = nonFuture.length ? nonFuture : sortByDateDesc(items);
+        }
         const start = (browseState.page - 1) * 20;
         const pageItems = items.slice(start, start + 20);
         renderCards('browseResults', pageItems);
@@ -1558,6 +1636,16 @@
 
     function normalizeItems(json) {
       return json?.result?.items || [];
+    }
+
+    function uniqueStrings(arr) {
+      const seen = new Set();
+      return arr.filter(v => {
+        const key = normalizeText(v);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function uniqueItems(items) {
@@ -1599,11 +1687,11 @@
         const date = itemDate(item);
         const rank = rankStart + index + 1;
         return `<article class="card">
-          <a class="thumb" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+          <button class="thumb detail-thumb" type="button" data-target="${targetId}" data-index="${index}">
             ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(item.title || '')}" loading="lazy">` : ''}
             <span class="badge">${escapeHtml(item.service_name || item.floor_name || 'DMM')}</span>
             ${isRanking ? `<span class="rank-badge">${rank}位</span>` : ''}
-          </a>
+          </button>
           <div class="card-body">
             <h4 class="card-title">${escapeHtml(item.title || 'タイトル未取得')}</h4>
             ${maker ? `<div class="meta">メーカー：${escapeHtml(maker)}</div>` : ''}
@@ -1619,7 +1707,7 @@
     }
 
     function handleDetailClick(e) {
-      const btn = e.target.closest('.detail-btn');
+      const btn = e.target.closest('.detail-btn, .detail-thumb');
       if (!btn) return;
       const targetId = btn.dataset.target;
       const index = Number(btn.dataset.index);
