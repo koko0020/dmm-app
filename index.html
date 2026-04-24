@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v18</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v27</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -1166,6 +1166,23 @@
       return fallbackName ? matchesGenreName(item, fallbackName) : false;
     }
 
+    function isPlanningGenreName(name) {
+      return normalizeText(name) === normalizeText('企画');
+    }
+
+    function genreSearchTermsForName(name) {
+      const n = normalizeText(name);
+      if (!n) return [];
+      if (n === normalizeText('企画')) return ['企画', '企画物', 'MM号', 'マジックミラー号'];
+      if (n.includes(normalizeText('デビュー'))) return ['デビュー作品', 'デビュー作', 'デビュー', '新人'];
+      if (n === normalizeText('複数') || n === normalizeText('複数人')) return [];
+      return [name];
+    }
+
+    function genreSearchTermsFromPairs(pairs) {
+      return uniqueStrings((pairs || []).flatMap(g => genreSearchTermsForName(g?.name || (String(g?.id || '').startsWith('kw:') ? String(g.id).slice(3) : ''))));
+    }
+
     function genreIdByName(name, format = '2d') {
       const n = normalizeText(name);
       const list = format === 'vr' ? [...allGenresVR, ...allGenres2D, ...fallbackGenres('vr')] : [...allGenres2D, ...fallbackGenres('2d')];
@@ -1935,8 +1952,8 @@
       if (allGenrePairs.length) {
         await Promise.all(allGenrePairs.slice(0, 8).map(g => fetchOne({ ...baseParams, genre_id: g.id, offset: 1 })));
       }
-      const nameKeywords = [...genrePairs, ...keywordGenrePairs].map(g => g.name).filter(name => name && !/^複数(人)?$/.test(name));
-      const keywordQueries = uniqueStrings([keyword, ...nameKeywords]).filter(Boolean).slice(0, 6);
+      const nameKeywords = uniqueStrings([...genrePairs, ...keywordGenrePairs].flatMap(g => genreSearchTermsForName(g.name)).filter(Boolean));
+      const keywordQueries = uniqueStrings([keyword, ...nameKeywords]).filter(Boolean).slice(0, 10);
       if (keywordQueries.length || !allGenrePairs.length) {
         const maxPages = sortNew ? 10 : 4;
         for (const kw of (keywordQueries.length ? keywordQueries : [''])) {
@@ -2367,16 +2384,15 @@
         if (sel.workType === 'multiple') genrePairs.push({ id: 'kw:複数', name: '複数' });
         const excludeGenrePairs = [];
 
-        const expandedGenreWords = [];
-        for (const g of genrePairs) {
-          if (!g.name) continue;
-          expandedGenreWords.push(g.name);
-          if (normalizeText(g.name).includes(normalizeText('デビュー'))) expandedGenreWords.push('デビュー', 'デビュー作', '新人');
-          if (normalizeText(g.name) === normalizeText('企画')) expandedGenreWords.push('企画', '企画物', '企画単体', '企画作品', 'MM号', 'マジックミラー号');
-        }
+        const genreSearchTerms = genreSearchTermsFromPairs(genrePairs);
         const actressNames = selectedActressNames();
-        const primaryKeyword = uniqueStrings([keyword, ...expandedGenreWords, ...actressNames, format === 'vr' ? 'VR' : ''].filter(Boolean)).join(' ');
-        const numericGenre = genrePairs.find(g => g.id && !String(g.id).startsWith('kw:'));
+        // ジャンル語を1つのkeywordに全部連結するとAND検索のようになり、
+        // 「企画 + MM号 + マジックミラー号」を全部含む作品だけを探して0件になりやすい。
+        // そのため基本キーワードとジャンル補助語は分け、ジャンル補助語は1語ずつ別リクエストで検索する。
+        const coreKeyword = uniqueStrings([keyword, ...actressNames, format === 'vr' ? 'VR' : ''].filter(Boolean)).join(' ');
+        const primaryKeyword = coreKeyword;
+        const numericGenrePairs = genrePairs.filter(g => g.id && !String(g.id).startsWith('kw:'));
+        const numericGenre = numericGenrePairs[0];
         const results = appendMode ? [...recommendCachedResults] : [];
         const seen = new Set(results.map(item => item.content_id || item.product_id || item.title).filter(Boolean));
         const maxPages = targetLimit > RECOMMEND_INITIAL_LIMIT ? 22 : 12;
@@ -2403,14 +2419,25 @@
           const fetches = [];
           const pushItems = (json) => { batch.push(...normalizeItems(json)); };
 
-          if (numericGenre) {
-            fetches.push(dmmGet('ItemList', { ...base, hits, offset, genre_id: numericGenre.id, keyword: primaryKeyword || undefined }).then(pushItems).catch(() => {}));
+          for (const g of numericGenrePairs.slice(0, 5)) {
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, genre_id: g.id, keyword: coreKeyword || undefined }).then(pushItems).catch(() => {}));
           }
-          fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: primaryKeyword || undefined }).then(pushItems).catch(() => {}));
+          if (!numericGenrePairs.length || coreKeyword) {
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: coreKeyword || undefined }).then(pushItems).catch(() => {}));
+          }
+
+          // ジャンル補助語は必ず1語ずつ検索する。
+          // 例: 企画 -> keyword=企画 / keyword=企画物 / keyword=MM号 / keyword=マジックミラー号 を別々に取得してマージ。
+          for (const term of genreSearchTerms.slice(0, 10)) {
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: uniqueStrings([term, coreKeyword].filter(Boolean)).join(' ') }).then(pushItems).catch(() => {}));
+          }
 
           // 女優名が選ばれている場合は、女優名単体でも拾う。候補確認後に出演女優で厳密に絞る。
           for (const name of actressNames.slice(0, 3)) {
-            fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: uniqueStrings([name, ...expandedGenreWords, keyword].filter(Boolean)).join(' ') }).then(pushItems).catch(() => {}));
+            fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: uniqueStrings([name, keyword].filter(Boolean)).join(' ') }).then(pushItems).catch(() => {}));
+            for (const term of genreSearchTerms.slice(0, 4)) {
+              fetches.push(dmmGet('ItemList', { ...base, hits, offset, keyword: uniqueStrings([name, term, keyword].filter(Boolean)).join(' ') }).then(pushItems).catch(() => {}));
+            }
           }
 
           await Promise.all(fetches);
@@ -2423,7 +2450,7 @@
         // 条件が厳しくて0件の場合だけ、作品条件を少し緩めて近い候補を出す。
         let finalItems = results;
         if (!finalItems.length) {
-          const json = await dmmGet('ItemList', { ...base, hits: 40, keyword: primaryKeyword || keyword || undefined });
+          const json = await dmmGet('ItemList', { ...base, hits: 40, keyword: primaryKeyword || genreSearchTerms[0] || keyword || undefined });
           let fallback = filterByFormat(normalizeItems(json), format);
           fallback = applyExcludeKeywords(fallback, excludeKeywords);
           if (isAmateurSelected(genrePairs)) fallback = fallback.filter(matchesAmateurAllowedSource);
