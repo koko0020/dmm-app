@@ -629,6 +629,7 @@
             <button class="pill" data-value="熟女">熟女</button>
             <button class="pill" data-value="スレンダー">スレンダー</button>
             <button class="pill" data-value="ぽっちゃり">ぽっちゃり</button>
+            <button class="pill" data-value="剛毛">剛毛</button>
           </div>
 
           <div class="subgrid">
@@ -719,7 +720,15 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>8. キーワード・女優名</h2></div>
+          <div class="section-head"><h2>8. 除外キーワード</h2></div>
+          <p class="hint">タイトル・ジャンル・メーカー・シリーズ・女優名に含まれる作品を除外します。スペース・カンマ・読点で複数指定できます。</p>
+          <div class="search-box">
+            <input id="recommendExcludeKeyword" placeholder="例：NTR、熟女、総集編..." />
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><h2>9. キーワード・女優名</h2></div>
           <div class="search-box">
             <input id="recommendKeyword" placeholder="例：MM号、椿りか、剛毛..." />
           </div>
@@ -883,7 +892,7 @@
     const actressProfileCache = new Map();
 
     const situationTags = ['NTR','ドラマ','素人','ハメ撮り','企画','痴女','M男','ハーレム','子作り','先生 生徒','上司','家庭教師','彼女','友達','セフレ','温泉','銭湯','メンエス','ピンサロ','ソープ','制服','水着','主観','天井特化'];
-    const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人'];
+    const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人','イラマチオ'];
     const makerList = ['SOD','MOODYZ','Madonna','イエローバナナ','プレステージ','S1','エスワン','IDEAPOCKET','専属','kawaii','E-BODY','Faleno','RUBY','V&R','マックスA','ムーディーズ','TMA','WANZ','KMP','ダスッ！','アリスJAPAN','DMMオリジナル','bibian','ナチュラルハイ'];
 
     const popularGenresBase = [
@@ -992,6 +1001,26 @@
         ...(item.iteminfo?.actress || []).map(g => g.name)
       ];
       return normalizeText(parts.filter(Boolean).join(' '));
+    }
+
+    function splitKeywords(value) {
+      return String(value || '')
+        .split(/[\s　,，、]+/)
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+
+    function excludeKeywordTokens() {
+      return splitKeywords($('recommendExcludeKeyword')?.value || '');
+    }
+
+    function applyExcludeKeywords(items, tokens) {
+      const normalized = tokens.map(normalizeText).filter(Boolean);
+      if (!normalized.length) return items;
+      return items.filter(item => {
+        const text = itemSearchText(item);
+        return !normalized.some(kw => text.includes(kw));
+      });
     }
 
     function itemGenreIds(item) {
@@ -1251,20 +1280,32 @@
       const key = String(actress?.id || actress?.name || '').trim();
       if (!key) return null;
       if (actressProfileCache.has(key)) return actressProfileCache.get(key);
-      const params = { hits: 1 };
-      if (actress.id) params.actress_id = actress.id;
-      else if (actress.name) params.keyword = actress.name;
-      let profile = null;
-      try {
+
+      async function readProfile(params) {
         const json = await dmmGet('ActressSearch', params);
         const result = json?.result || {};
         const list = result.actress || result.actresses || result.items || [];
-        const raw = Array.isArray(list) ? list[0] : list;
-        if (raw) profile = normalizeActressProfile(raw);
+        const arr = Array.isArray(list) ? list : [list];
+        const raw = arr.find(Boolean);
+        return raw ? normalizeActressProfile(raw) : null;
+      }
+
+      let profile = null;
+      try {
+        if (actress.id) profile = await readProfile({ hits: 1, actress_id: actress.id });
       } catch (e) {
         profile = null;
       }
+      if (!profile && actress.name) {
+        try {
+          profile = await readProfile({ hits: 3, keyword: actress.name });
+        } catch (e) {
+          profile = null;
+        }
+      }
       actressProfileCache.set(key, profile);
+      if (actress?.name) actressProfileCache.set(String(actress.name), profile);
+      if (actress?.id) actressProfileCache.set(String(actress.id), profile);
       return profile;
     }
 
@@ -1282,7 +1323,10 @@
     async function filterByActressSpecs(items) {
       if (!hasActressSpecFilters()) return items;
       const checked = [];
-      const source = items.slice(0, 90);
+      // 先に作品条件で広めに取得し、その作品の出演女優プロフィールを後から確認する。
+      // これにより「156cm + デビュー作品」「20〜22歳 + 企画」のような組み合わせでも、
+      // 作品ジャンル・人気順を保ったまま身長/年齢/バスト目安で絞り込める。
+      const source = items.slice(0, 360);
       for (const item of source) {
         const actresses = item.iteminfo?.actress || [];
         let ok = false;
@@ -1443,6 +1487,7 @@
       if ($('includeGenreFilter')) $('includeGenreFilter').addEventListener('input', renderGenres);
       if ($('releaseDateSelect')) $('releaseDateSelect').addEventListener('change', renderSelectedChips);
       $('recommendKeyword').addEventListener('input', renderSelectedChips);
+      if ($('recommendExcludeKeyword')) $('recommendExcludeKeyword').addEventListener('input', renderSelectedChips);
       $('recommendSearch').addEventListener('click', () => loadRecommend());
       $('resetConditions').addEventListener('click', resetConditions);
 
@@ -1823,6 +1868,7 @@
       tags.forEach(v => labels.push(v));
       makerTags.forEach(v => labels.push(v));
       genreIds.forEach(id => labels.push('含む:' + (genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : id))));
+      excludeKeywordTokens().forEach(v => labels.push('除外:' + v));
       const kw = $('recommendKeyword')?.value?.trim();
       if (kw) labels.push(kw);
       return labels;
@@ -1904,7 +1950,8 @@
         ...releaseDateParams()
       }, format);
       if (recommendSort === 'date' && !base.lte_date) base.lte_date = todayEndParam();
-      lastRecommendQuery = { base, keyword, genreIds: [...genreIds], excludeGenreIds: [...excludeGenreIds] };
+      const excludeKeywords = excludeKeywordTokens();
+      lastRecommendQuery = { base, keyword, excludeKeywords, genreIds: [...genreIds], excludeGenreIds: [...excludeGenreIds] };
       $('recommendStatus').className = 'loading';
       $('recommendStatus').textContent = '検索中...';
       $('recommendResults').innerHTML = '';
@@ -1921,7 +1968,13 @@
         const excludeGenrePairs = [];
 
         // APIに投げる検索語。年齢・身長・カップ数は女優プロフィールで厳密判定する。
-        const keywordParts = uniqueStrings([keyword, ...genrePairs.map(g => g.name), format === 'vr' ? 'VR' : ''].filter(Boolean));
+        const expandedGenreWords = [];
+        for (const g of genrePairs) {
+          expandedGenreWords.push(g.name);
+          if (normalizeText(g.name).includes(normalizeText('デビュー'))) expandedGenreWords.push('デビュー', 'デビュー作', '新人');
+          if (normalizeText(g.name) === normalizeText('企画')) expandedGenreWords.push('企画単体', '企画作品');
+        }
+        const keywordParts = uniqueStrings([keyword, ...expandedGenreWords, format === 'vr' ? 'VR' : ''].filter(Boolean));
         const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
         const fetchItemList = async (params, pages = 1) => {
           const hits = Number(params.hits || base.hits || 80);
@@ -1933,22 +1986,15 @@
           }
         };
 
-        // 年齢・身長・バスト条件がある場合は、先にActressSearchで候補女優を取得してから作品を拾う。
-        // ItemListだけで後判定すると年齢などが不安定なので、ActressSearchの
-        // gte_birthday / lte_birthday / gte_height / lte_height / gte_bust / lte_bust を起点にする。
-        const actressCandidates = await searchActressesBySpecs();
-        if (actressCandidates.length) {
-          for (const actress of actressCandidates.slice(0, 35)) {
-            if (items.length > 320) break;
-            if (actress.id) await fetchItemList({ ...base, article: 'actress', article_id: actress.id, keyword: keyword || undefined }, 1);
-            if (items.length < 180 && actress.name) await fetchItemList({ ...base, keyword: [actress.name, keyword].filter(Boolean).join(' ') }, 1);
-          }
-        }
+        // 女優条件（年齢・身長・バスト目安）は、作品を先に広めに取得した後で、
+        // 作品に紐づく女優プロフィールを確認して絞る。
+        // 例: 「156〜160cm + デビュー作品」なら、まずデビュー作品を人気順/新着順で取得し、
+        // その作品の女優身長をActressSearchで確認する。
 
         // ジャンルIDがある場合は各ジャンルで複数ページ取得し、あとでAND条件として厳密に絞る。
         for (const gp of genrePairs) {
           if (gp.id && !String(gp.id).startsWith('kw:')) {
-            await fetchItemList({ ...base, genre_id: gp.id, keyword: keyword || undefined }, 3);
+            await fetchItemList({ ...base, genre_id: gp.id, keyword: keyword || undefined }, 5);
           }
         }
 
@@ -1956,12 +2002,12 @@
         const queries = keywordParts.length ? keywordParts : [''];
         for (const q of queries.slice(0, 10)) {
           if (items.length > 260) break;
-          await fetchItemList({ ...base, keyword: q }, 2);
+          await fetchItemList({ ...base, keyword: q }, 3);
         }
 
         // 条件が少ないとき用のベース取得。
         if (items.length < 60) {
-          await fetchItemList({ ...base, keyword: format === 'vr' ? 'VR' : undefined }, 4);
+          await fetchItemList({ ...base, keyword: format === 'vr' ? 'VR' : undefined }, 5);
         }
 
         items = filterByFormat(uniqueItems(items), format);
@@ -1969,6 +2015,7 @@
         // 必須条件：フォーマット、単体/複数、発売日、選択ジャンル、年齢、身長、カップ数。
         // シチュエーション・プレイ内容・メーカー・自由キーワードはスコア加点にして、組み合わせ時のズレを減らす。
         items = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
+        items = applyExcludeKeywords(items, excludeKeywords);
         items = await filterByActressSpecs(items);
 
         const keywordsForScore = keywordParts.filter(k => k !== 'VR' && !genrePairs.some(g => normalizeText(g.name) === normalizeText(k)));
@@ -1981,7 +2028,7 @@
 
         renderCards('recommendResults', items);
         $('recommendStatus').className = 'empty';
-        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。選択した必須条件に合う作品を優先しています。` : '該当作品が見つかりませんでした。年齢・身長・バスト目安・ジャンルなどの条件を少し広げて再検索してください。';
+        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。作品条件を先に取得し、女優プロフィール条件で絞り込んでいます。` : '該当作品が見つかりませんでした。年齢・身長・バスト目安・ジャンルなどの条件を少し広げて再検索してください。';
       } catch (err) {
         $('recommendStatus').className = 'error';
         $('recommendStatus').textContent = '検索に失敗しました。' + err.message;
@@ -2266,6 +2313,7 @@
       makerTags.clear();
       if ($('releaseDateSelect')) $('releaseDateSelect').value = '';
       $('recommendKeyword').value = '';
+      if ($('recommendExcludeKeyword')) $('recommendExcludeKeyword').value = '';
       document.querySelectorAll('#recommend .pill').forEach(b => b.classList.remove('active'));
       renderGenres();
       renderSelectedChips();
