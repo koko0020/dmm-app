@@ -553,7 +553,7 @@
       <section id="recommend" class="tab-content active">
         <div class="section">
           <div class="notice">
-            初回は右上の「API設定」からAPI IDを保存してください。成人向けフロアのため、サイト指定は <b>FANZA</b>、アフィリエイトIDは <b>koko0020-990</b> を初期値にしています。
+            API IDは埋め込み済みです。変更したい場合だけ右上の「API設定」から保存してください。サイト指定は <b>FANZA</b>、アフィリエイトIDは <b>koko0020-990</b> です。
           </div>
           <div class="section-head"><h2>1. フォーマット</h2></div>
           <div class="button-row" data-single="format">
@@ -563,15 +563,7 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>2. 出演人数</h2></div>
-          <div class="button-row" data-single="persons">
-            <button class="pill" data-value="単体">👤 単体</button>
-            <button class="pill" data-value="複数">👥 複数</button>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-head"><h2>3. 女優の特徴</h2></div>
+          <div class="section-head"><h2>2. 女優の特徴</h2></div>
           <div class="button-row" data-tag-group="actress">
             <button class="pill" data-value="美女">美女</button>
             <button class="pill" data-value="美少女">美少女</button>
@@ -624,7 +616,7 @@
         <div class="section">
           <div class="section-head">
             <div>
-              <h2>4. ジャンル</h2>
+              <h2>3. ジャンル</h2>
               <p class="hint">APIからジャンルを取得します。フォーマットで2D/VRを切り替えるとジャンルも切り替わります。</p>
             </div>
             <button class="secondary" id="reloadGenres">ジャンル再取得</button>
@@ -637,22 +629,22 @@
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>5. シチュエーション</h2></div>
+          <div class="section-head"><h2>4. シチュエーション</h2></div>
           <div class="button-row" data-tag-group="situation"></div>
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>6. プレイ内容</h2></div>
+          <div class="section-head"><h2>5. プレイ内容</h2></div>
           <div class="button-row" data-tag-group="play"></div>
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>7. メーカー</h2></div>
+          <div class="section-head"><h2>6. メーカー</h2></div>
           <div class="button-row" data-maker-group></div>
         </div>
 
         <div class="section">
-          <div class="section-head"><h2>8. キーワード・女優名</h2></div>
+          <div class="section-head"><h2>7. キーワード・女優名</h2></div>
           <div class="search-box">
             <input id="recommendKeyword" placeholder="例：MM号、椿りか、剛毛..." />
           </div>
@@ -690,11 +682,6 @@
           <div class="button-row" id="browseFormat" style="margin-top:10px;">
             <button class="pill active" data-format="2d">📺 2D</button>
             <button class="pill" data-format="vr">🥽 VR</button>
-          </div>
-          <div class="filter-title">出演人数</div>
-          <div class="button-row" id="browsePersons">
-            <button class="pill" data-persons="単体作品">👤 単体</button>
-            <button class="pill" data-persons="複数人">👥 複数</button>
           </div>
           <div class="filter-title">ジャンル</div>
           <div class="genre-select-box" id="browseGenreBox">
@@ -789,10 +776,10 @@
     const CORS_PROXY_LEGACY = 'https://corsproxy.io/?';
     const ALL_ORIGINS_RAW = 'https://api.allorigins.win/raw?url=';
     const CONFIG_KEY = 'dmm_config';
-    const UI_STATE_KEY = 'dmm_ui_state_v8';
+    const UI_STATE_KEY = 'dmm_ui_state_v9';
 
     let config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
-    let sel = { format: null, persons: null, duration: null };
+    let sel = { format: null, duration: null };
     let tags = new Set();
     let specs = {};
     let genreIds = new Set();
@@ -802,7 +789,7 @@
     let genreNameById = new Map();
     let recommendSort = 'date';
     let lastRecommendQuery = null;
-    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', persons: '', tags: new Set(), makers: new Set(), genreIds: new Set(), activeTab: 'recommend' };
+    let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', tags: new Set(), makers: new Set(), genreIds: new Set(), activeTab: 'recommend' };
     const currentItemsByTarget = {};
     let lightboxImages = [];
     let lightboxIndex = 0;
@@ -812,7 +799,8 @@
     const makerList = ['SOD','MOODYZ','Madonna','イエローバナナ','プレステージ','S1','エスワン','IDEAPOCKET','専属','kawaii','E-BODY','Faleno','RUBY','V&R','マックスA','ムーディーズ','TMA','WANZ','KMP','ダスッ！','アリスJAPAN','DMMオリジナル','bibian','ナチュラルハイ'];
 
     const popularGenresBase = [
-      { id: '4025', name: '単体作品' }, { id: '', name: '複数人' }, { id: '', name: '素人' },
+      { id: '4025', name: '単体作品' }, { id: 'kw:複数', name: '複数' }, { id: '', name: '素人' },
+      { id: 'kw:デビュー作品', name: 'デビュー作品' }, { id: 'kw:デビュー作', name: 'デビュー作' },
       { id: '5001', name: '中出し' }, { id: '', name: '美少女' }, { id: '', name: '美女' },
       { id: '', name: 'ギャル' }, { id: '', name: '人妻' }, { id: '', name: '熟女' },
       { id: '', name: '巨乳' }, { id: '102', name: '美乳' }, { id: '', name: 'スレンダー' },
@@ -837,7 +825,7 @@
       { name: 'プレイスタイル', keys: ['中出し','顔射','フェラ','パイズリ','潮吹き','オナニー','拘束','ソフト','ハード','主観'] },
       { name: '関係性', keys: ['彼女','友達','幼なじみ','上司','部下','先生','生徒','母','義母','姉','妹'] },
       { name: '風俗・業種', keys: ['ソープ','ピンサロ','メンズエステ','メンエス','デリヘル','風俗','キャバクラ'] },
-      { name: '作品スタイル', keys: ['単体作品','企画','ベスト','総集編','独占','専属','ハメ撮り','ドキュメンタリー'] },
+      { name: '作品スタイル', keys: ['単体作品','デビュー作品','デビュー作','企画','ベスト','総集編','独占','専属','ハメ撮り','ドキュメンタリー'] },
       { name: 'VR特化', keys: ['VR','主観','天井','没入','距離感','密着','高画質'] }
     ];
 
@@ -935,9 +923,22 @@
       return (item.iteminfo?.genre || []).map(g => g.name || '').filter(Boolean);
     }
 
+    function isSingleWork(item) {
+      return itemGenreNames(item).some(g => normalizeText(g) === normalizeText('単体作品') || normalizeText(g).includes(normalizeText('単体作品')));
+    }
+
+    function isMultipleWorkByRule(item) {
+      // ユーザー要望: 「単体作品」と書いていないものは複数扱いにする
+      return !isSingleWork(item);
+    }
+
     function matchesGenreName(item, name) {
       const n = normalizeText(name);
       if (!n) return true;
+      if (n === normalizeText('複数') || n === normalizeText('複数人')) return isMultipleWorkByRule(item);
+      if (n === normalizeText('デビュー作')) {
+        return itemGenreNames(item).some(g => normalizeText(g).includes(normalizeText('デビュー')));
+      }
       return itemGenreNames(item).some(g => {
         const gn = normalizeText(g);
         return gn === n || gn.includes(n) || n.includes(gn);
@@ -945,7 +946,12 @@
     }
 
     function matchesGenreIdOrName(item, id, fallbackName = '') {
-      if (id && itemGenreIds(item).has(String(id))) return true;
+      const sid = String(id || '');
+      if (fallbackName && (normalizeText(fallbackName) === normalizeText('複数') || normalizeText(fallbackName) === normalizeText('複数人'))) {
+        return isMultipleWorkByRule(item);
+      }
+      if (sid.startsWith('kw:')) return matchesGenreName(item, fallbackName || sid.slice(3));
+      if (sid && itemGenreIds(item).has(sid)) return true;
       return fallbackName ? matchesGenreName(item, fallbackName) : false;
     }
 
@@ -1174,16 +1180,6 @@
         saveUiState();
         loadBrowse();
       });
-      $('browsePersons').addEventListener('click', e => {
-        const btn = e.target.closest('.pill'); if (!btn) return;
-        const value = btn.dataset.persons;
-        browseState.persons = browseState.persons === value ? '' : value;
-        $('browsePersons').querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
-        if (browseState.persons) btn.classList.add('active');
-        browseState.page = 1;
-        saveUiState();
-        loadBrowse();
-      });
       $('browseGenreToggle').addEventListener('click', () => {
         $('browseGenreBox').classList.toggle('open');
         renderBrowseGenres();
@@ -1282,7 +1278,6 @@
             format: browseState.format,
             page: browseState.page,
             keyword: $('browseKeyword')?.value?.trim() || browseState.keyword || '',
-            persons: browseState.persons || '',
             genreIds: [...browseState.genreIds]
           }
         }));
@@ -1298,7 +1293,6 @@
         if (b.format) browseState.format = b.format;
         if (b.page) browseState.page = Number(b.page) || 1;
         if (b.keyword) browseState.keyword = b.keyword;
-        if (b.persons) browseState.persons = b.persons;
         if (Array.isArray(b.genreIds)) browseState.genreIds = new Set(b.genreIds.map(String));
       } catch {}
     }
@@ -1308,7 +1302,6 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === browseState.activeTab));
       $('browseMode')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === browseState.mode));
       $('browseFormat')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', btn.dataset.format === browseState.format));
-      $('browsePersons')?.querySelectorAll('.pill').forEach(btn => btn.classList.toggle('active', !!browseState.persons && btn.dataset.persons === browseState.persons));
       if ($('browseKeyword')) $('browseKeyword').value = browseState.keyword || '';
       updateClearKeywordButton();
     }
@@ -1402,7 +1395,7 @@
       if (allGenrePairs.length) {
         await Promise.all(allGenrePairs.slice(0, 8).map(g => fetchOne({ ...baseParams, genre_id: g.id, offset: 1 })));
       }
-      const nameKeywords = [...genrePairs, ...keywordGenrePairs].map(g => g.name).filter(Boolean);
+      const nameKeywords = [...genrePairs, ...keywordGenrePairs].map(g => g.name).filter(name => name && !/^複数(人)?$/.test(name));
       const keywordQueries = uniqueStrings([keyword, ...nameKeywords]).filter(Boolean).slice(0, 6);
       if (keywordQueries.length || !allGenrePairs.length) {
         const maxPages = sortNew ? 10 : 4;
@@ -1476,7 +1469,6 @@
     function allSelectedLabels() {
       const labels = [];
       if (sel.format) labels.push(sel.format === 'vr' ? 'VR' : '2D');
-      if (sel.persons) labels.push(sel.persons);
       Object.values(specs).forEach(v => labels.push(v));
       tags.forEach(v => labels.push(v));
       makerTags.forEach(v => labels.push(v));
@@ -1492,7 +1484,6 @@
 
     function buildKeyword() {
       const parts = [];
-      if (sel.persons) parts.push(sel.persons);
       Object.entries(specs).forEach(([k, v]) => { if (k !== 'era') parts.push(v); });
       tags.forEach(v => parts.push(v));
       makerTags.forEach(v => parts.push(v));
@@ -1566,15 +1557,12 @@
     function browseKeywordParts() {
       return [
         $('browseKeyword').value.trim(),
-        browseState.persons,
         browseState.format === 'vr' ? 'VR' : ''
       ].filter(Boolean);
     }
 
     function browseGenrePairs() {
-      const pairs = browseSelectedGenrePairs();
-      if (browseState.persons) pairs.push({ id: genreIdByName(browseState.persons, browseState.format), name: browseState.persons });
-      return pairs;
+      return browseSelectedGenrePairs();
     }
 
     async function loadBrowse() {
@@ -1586,15 +1574,11 @@
       const keywordRaw = $('browseKeyword').value.trim();
       const keywordGenrePairs = genreMatchesKeyword(keywordRaw, browseState.format).map(g => ({ id: g.id, name: g.name }));
       const keyword = [keywordRaw, browseState.format === 'vr' ? 'VR' : ''].filter(Boolean).join(' ');
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
-      const todayParam = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}T23:59:59`;
       const baseParams = applyFormatParams({
         service: 'digital',
         hits: 40,
         sort: browseState.mode === 'ranking' ? 'rank' : 'date',
-        keyword,
-        ...(browseState.mode === 'new' ? { lte_date: todayParam } : {})
+        keyword
       }, browseState.format);
       $('browseStatus').className = 'loading';
       $('browseStatus').textContent = '読み込み中...';
@@ -1610,11 +1594,11 @@
           sortNew: browseState.mode === 'new'
         });
         items = filterByFormat(uniqueItems(items), browseState.format);
-        const strictGenrePairs = genrePairs.filter(g => g.id && !String(g.id).startsWith('kw:'));
-        items = applyStrictFilters(items, { genrePairs: strictGenrePairs });
+        items = applyStrictFilters(items, { genrePairs });
         if (browseState.mode === 'new') {
+          const recent7 = sortByDateDesc(filterRecentNewItems(items, 7));
           const nonFuture = sortByDateDesc(filterFutureItems(items));
-          items = nonFuture.length ? nonFuture : sortByDateDesc(items);
+          items = recent7.length ? recent7 : (nonFuture.length ? nonFuture : sortByDateDesc(items));
         }
         const start = (browseState.page - 1) * 20;
         const pageItems = items.slice(start, start + 20);
@@ -1828,7 +1812,7 @@
     }
 
     function resetConditions() {
-      sel = { format: null, persons: null, duration: null };
+      sel = { format: null, duration: null };
       tags.clear();
       specs = {};
       genreIds.clear();
