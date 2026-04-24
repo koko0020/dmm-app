@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ v17</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v18</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -862,7 +862,7 @@
     const CORS_PROXY_LEGACY = 'https://corsproxy.io/?';
     const ALL_ORIGINS_RAW = 'https://api.allorigins.win/raw?url=';
     const CONFIG_KEY = 'dmm_config';
-    const UI_STATE_KEY = 'dmm_ui_state_v9';
+    const UI_STATE_KEY = 'dmm_ui_state_v10';
 
     let config = { apiId: 'zCVL3bHPXwzBf0VsMVKg', affiliateId: 'koko0020-990', site: 'FANZA' };
     let sel = { format: null, workType: null, duration: null };
@@ -1808,7 +1808,7 @@
       const keyword = buildKeyword();
       const base = applyFormatParams({
         service: 'digital',
-        hits: format === 'vr' ? 40 : 50,
+        hits: format === 'vr' ? 60 : 80,
         sort: sortParam(recommendSort),
         ...releaseDateParams()
       }, format);
@@ -1820,58 +1820,65 @@
       renderSelectedChips();
       try {
         let items = [];
-        const selectedGenres = [...genreIds].slice(0, 6);
-        const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '') }));
+        const selectedGenres = [...genreIds].slice(0, 8);
+        const genrePairs = selectedGenres.map(id => ({
+          id,
+          name: genreNameById.get(String(id)) || (String(id).startsWith('kw:') ? String(id).slice(3) : '')
+        }));
         if (sel.workType === 'single') genrePairs.push({ id: '4025', name: '単体作品' });
         if (sel.workType === 'multiple') genrePairs.push({ id: 'kw:複数', name: '複数' });
         const excludeGenrePairs = [];
+
+        // APIに投げる検索語。年齢・身長・カップ数は女優プロフィールで厳密判定する。
         const keywordParts = uniqueStrings([keyword, ...genrePairs.map(g => g.name), format === 'vr' ? 'VR' : ''].filter(Boolean));
         const addUnique = arr => { items = uniqueItems([...items, ...arr]); };
+        const fetchItemList = async (params, pages = 1) => {
+          const hits = Number(params.hits || base.hits || 80);
+          for (let i = 0; i < pages; i++) {
+            try {
+              const json = await dmmGet('ItemList', { ...params, offset: 1 + i * hits });
+              addUnique(normalizeItems(json));
+            } catch {}
+          }
+        };
 
+        // ジャンルIDがある場合は各ジャンルで複数ページ取得し、あとでAND条件として厳密に絞る。
         for (const gp of genrePairs) {
           if (gp.id && !String(gp.id).startsWith('kw:')) {
-            try {
-              const json = await dmmGet('ItemList', { ...base, genre_id: gp.id, keyword: keyword || undefined, offset: 1 });
-              addUnique(normalizeItems(json));
-            } catch {}
+            await fetchItemList({ ...base, genre_id: gp.id, keyword: keyword || undefined }, 3);
           }
         }
 
+        // キーワード・固定ジャンル名でも広く拾う。拾った後に必須条件で落とす。
         const queries = keywordParts.length ? keywordParts : [''];
-        for (const q of queries.slice(0, 8)) {
-          if (items.length > 120) break;
-          try {
-            const json = await dmmGet('ItemList', { ...base, keyword: q, offset: 1 });
-            addUnique(normalizeItems(json));
-          } catch {}
+        for (const q of queries.slice(0, 10)) {
+          if (items.length > 260) break;
+          await fetchItemList({ ...base, keyword: q }, 2);
         }
 
-        if (items.length < 8) {
-          for (let i = 0; i < 3; i++) {
-            try {
-              const json = await dmmGet('ItemList', { ...base, keyword: format === 'vr' ? 'VR' : '', offset: 1 + i * Number(base.hits || 50) });
-              addUnique(normalizeItems(json));
-            } catch {}
-          }
+        // 条件が少ないとき用のベース取得。
+        if (items.length < 60) {
+          await fetchItemList({ ...base, keyword: format === 'vr' ? 'VR' : undefined }, 4);
         }
 
         items = filterByFormat(uniqueItems(items), format);
+
+        // 必須条件：フォーマット、単体/複数、発売日、選択ジャンル、年齢、身長、カップ数。
+        // シチュエーション・プレイ内容・メーカー・自由キーワードはスコア加点にして、組み合わせ時のズレを減らす。
+        items = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
         items = await filterByActressSpecs(items);
-        // おすすめは完全一致で0件にしない。厳密一致が十分ある時だけ厳密化し、基本はスコア順。
-        items = applyStrictFilters(items, { excludeGenrePairs });
-        const strict = applyStrictFilters(items, { genrePairs, excludeGenrePairs });
-        const pool = strict.length >= 4 ? strict : items;
-        const keywordsForScore = keywordParts.filter(k => k !== 'VR');
-        items = [...pool].sort((a, b) => {
+
+        const keywordsForScore = keywordParts.filter(k => k !== 'VR' && !genrePairs.some(g => normalizeText(g.name) === normalizeText(k)));
+        items = [...items].sort((a, b) => {
           const diff = scoreItem(b, { genrePairs, keywords: keywordsForScore }) - scoreItem(a, { genrePairs, keywords: keywordsForScore });
           if (diff) return diff;
           if (recommendSort === 'date') return Date.parse((b.date || '').replace(' ', 'T')) - Date.parse((a.date || '').replace(' ', 'T'));
           return 0;
-        });
-        items = items.slice(0, 8);
+        }).slice(0, 20);
+
         renderCards('recommendResults', items);
         $('recommendStatus').className = 'empty';
-        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。条件に近い順で並べています。` : '該当作品が見つかりませんでした。条件を減らして再検索してください。';
+        $('recommendStatus').textContent = items.length ? `${items.length}件表示しています。選択した必須条件に合う作品を優先しています。` : '該当作品が見つかりませんでした。年齢・身長・カップ数・ジャンルなどの条件を少し広げて再検索してください。';
       } catch (err) {
         $('recommendStatus').className = 'error';
         $('recommendStatus').textContent = '検索に失敗しました。' + err.message;
