@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DMM アフィリエイト動画おすすめアプリ</title>
+  <title>DMM アフィリエイト動画おすすめアプリ v6</title>
   <style>
     :root {
       --bg: #fff7f7;
@@ -434,7 +434,17 @@
     .sample-grid img { width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: #fff1f1; border-radius: 10px; border: 1px solid var(--border); padding: 4px; cursor: zoom-in; }
     .detail-main-img { cursor: zoom-in; }
     .lightbox-modal { width: min(1120px, 100%); max-height: 94vh; overflow: auto; background: #fff; }
+    .lightbox-stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: min(72vh, 720px); }
     .lightbox-img { display: block; max-width: 100%; max-height: 82vh; width: auto; height: auto; margin: 0 auto; object-fit: contain; border-radius: 14px; background: #fff1f1; }
+    .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(230, 0, 18, .22); background: rgba(255, 255, 255, .92); color: var(--accent); font-size: 28px; font-weight: 900; cursor: pointer; box-shadow: 0 10px 24px rgba(80, 0, 10, .16); display: grid; place-items: center; z-index: 2; }
+    .lightbox-nav:hover { background: #fff1f1; }
+    .lightbox-nav.prev { left: 10px; }
+    .lightbox-nav.next { right: 10px; }
+    .lightbox-counter { color: var(--muted); font-size: 13px; font-weight: 800; margin-right: auto; }
+    .lightbox-nav:disabled { opacity: .32; cursor: default; }
+    .pagination-bottom { margin-top: 18px; justify-content: center; }
+
+    @media (max-width: 640px) { .lightbox-nav { width: 40px; height: 40px; font-size: 24px; } .lightbox-nav.prev { left: 4px; } .lightbox-nav.next { right: 4px; } }
     .filter-title { font-size: 13px; color: var(--muted); font-weight: 800; margin: 14px 0 8px; }
 
     .notice {
@@ -689,12 +699,16 @@
           <div class="results-head">
             <h3 id="browseTitle">作品一覧</h3>
             <div class="pagination">
-              <button class="secondary" id="prevPage">← 前へ</button>
-              <button class="secondary" id="nextPage">次へ →</button>
+              <button class="secondary page-prev" id="prevPage">← 前へ</button>
+              <button class="secondary page-next" id="nextPage">次へ →</button>
             </div>
           </div>
           <div id="browseStatus" class="empty">読み込み待ちです。</div>
           <div id="browseResults" class="grid"></div>
+          <div class="pagination pagination-bottom">
+            <button class="secondary page-prev">← 前へ</button>
+            <button class="secondary page-next">次へ →</button>
+          </div>
         </div>
       </section>
     </main>
@@ -734,10 +748,15 @@
 
   <div class="modal-backdrop" id="imageLightbox">
     <div class="config-modal lightbox-modal">
-      <div class="modal-actions" style="margin-top:0; margin-bottom:12px;">
+      <div class="modal-actions" style="margin-top:0; margin-bottom:12px; align-items:center;">
+        <span class="lightbox-counter" id="lightboxCounter"></span>
         <button class="secondary" id="closeLightbox">閉じる</button>
       </div>
-      <img id="lightboxImg" class="lightbox-img" alt="拡大画像">
+      <div class="lightbox-stage">
+        <button class="lightbox-nav prev" id="lightboxPrev" type="button" aria-label="前の画像">‹</button>
+        <img id="lightboxImg" class="lightbox-img" alt="拡大画像">
+        <button class="lightbox-nav next" id="lightboxNext" type="button" aria-label="次の画像">›</button>
+      </div>
     </div>
   </div>
 
@@ -762,6 +781,8 @@
     let lastRecommendQuery = null;
     let browseState = { mode: 'new', format: '2d', page: 1, keyword: '', persons: '', tags: new Set(), makers: new Set() };
     const currentItemsByTarget = {};
+    let lightboxImages = [];
+    let lightboxIndex = 0;
 
     const situationTags = ['NTR','ドラマ','素人','ハメ撮り','企画','痴女','M男','ハーレム','子作り','先生 生徒','上司','家庭教師','彼女','友達','セフレ','温泉','銭湯','メンエス','ピンサロ','ソープ','制服','水着','主観','天井特化'];
     const playTags = ['中出し','顔射','フェラ','パイズリ','オナニー','潮吹き','絶頂','おしっこ','ハード系','密着','3P','複数人'];
@@ -829,6 +850,88 @@
 
     function sortByDateDesc(items) {
       return [...items].sort((a, b) => Date.parse((b.date || '').replace(' ', 'T')) - Date.parse((a.date || '').replace(' ', 'T')));
+    }
+
+    function parseItemDate(item) {
+      const raw = item?.date || '';
+      if (!raw) return null;
+      const d = new Date(String(raw).replace(' ', 'T'));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function filterFutureItems(items) {
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      return items.filter(item => {
+        const d = parseItemDate(item);
+        return !d || d <= todayEnd;
+      });
+    }
+
+    function normalizeText(str) {
+      return String(str || '').toLowerCase().replace(/[・\s　]/g, '');
+    }
+
+    function itemSearchText(item) {
+      const parts = [
+        item.title, item.content_id, item.product_id,
+        ...(item.iteminfo?.genre || []).map(g => g.name),
+        ...(item.iteminfo?.maker || []).map(g => g.name),
+        ...(item.iteminfo?.label || []).map(g => g.name),
+        ...(item.iteminfo?.series || []).map(g => g.name),
+        ...(item.iteminfo?.actress || []).map(g => g.name)
+      ];
+      return normalizeText(parts.filter(Boolean).join(' '));
+    }
+
+    function itemGenreIds(item) {
+      return new Set((item.iteminfo?.genre || []).map(g => String(g.id || g.genre_id || '')).filter(Boolean));
+    }
+
+    function itemGenreNames(item) {
+      return (item.iteminfo?.genre || []).map(g => g.name || '').filter(Boolean);
+    }
+
+    function matchesGenreName(item, name) {
+      const n = normalizeText(name);
+      if (!n) return true;
+      return itemGenreNames(item).some(g => {
+        const gn = normalizeText(g);
+        return gn === n || gn.includes(n) || n.includes(gn);
+      });
+    }
+
+    function matchesGenreIdOrName(item, id, fallbackName = '') {
+      if (id && itemGenreIds(item).has(String(id))) return true;
+      return fallbackName ? matchesGenreName(item, fallbackName) : false;
+    }
+
+    function genreIdByName(name, format = '2d') {
+      const n = normalizeText(name);
+      const list = format === 'vr' ? [...allGenresVR, ...allGenres2D] : allGenres2D;
+      let hit = list.find(g => normalizeText(g.name) === n);
+      if (!hit) hit = list.find(g => normalizeText(g.name).includes(n) || n.includes(normalizeText(g.name)));
+      return hit?.id || '';
+    }
+
+    function applyStrictFilters(items, options = {}) {
+      const genrePairs = options.genrePairs || [];
+      const requiredGenreNames = options.requiredGenreNames || [];
+      const requiredKeywords = options.requiredKeywords || [];
+      return items.filter(item => {
+        for (const pair of genrePairs) {
+          if (!matchesGenreIdOrName(item, pair.id, pair.name)) return false;
+        }
+        for (const name of requiredGenreNames) {
+          if (!matchesGenreName(item, name)) return false;
+        }
+        const text = itemSearchText(item);
+        for (const kw of requiredKeywords) {
+          const n = normalizeText(kw);
+          if (n && !text.includes(n)) return false;
+        }
+        return true;
+      });
     }
 
     function applyFormatParams(params, format) {
@@ -1007,6 +1110,9 @@
       $('closeDetail').addEventListener('click', closeDetailModal);
       $('imageLightbox').addEventListener('click', e => { if (e.target.id === 'imageLightbox') closeLightbox(); });
       $('closeLightbox').addEventListener('click', closeLightbox);
+      $('lightboxPrev').addEventListener('click', () => moveLightbox(-1));
+      $('lightboxNext').addEventListener('click', () => moveLightbox(1));
+      document.addEventListener('keydown', handleLightboxKey);
       $('detailContent').addEventListener('click', handleDetailImageClick);
       $('recommendResults').addEventListener('click', handleDetailClick);
       $('browseResults').addEventListener('click', handleDetailClick);
@@ -1060,12 +1166,12 @@
       $('browseKeyword').addEventListener('keydown', e => {
         if (e.key === 'Enter') $('browseSearch').click();
       });
-      $('prevPage').addEventListener('click', () => {
+      document.querySelectorAll('.page-prev').forEach(btn => btn.addEventListener('click', () => {
         if (browseState.page > 1) { browseState.page--; loadBrowse(); }
-      });
-      $('nextPage').addEventListener('click', () => {
+      }));
+      document.querySelectorAll('.page-next').forEach(btn => btn.addEventListener('click', () => {
         browseState.page++; loadBrowse();
-      });
+      }));
     }
 
     async function loadGenres() {
@@ -1231,7 +1337,9 @@
           items = normalizeItems(json);
         }
         items = filterByFormat(items, format);
-        if (recommendSort === 'date') items = sortByDateDesc(items);
+        const genrePairs = selectedGenres.map(id => ({ id, name: genreNameById.get(String(id)) || '' }));
+        items = applyStrictFilters(items, { genrePairs });
+        if (recommendSort === 'date') items = sortByDateDesc(filterFutureItems(items));
         items = items.slice(0, 8);
         renderCards('recommendResults', items);
         $('recommendStatus').className = items.length ? 'empty' : 'empty';
@@ -1252,15 +1360,26 @@
       ].filter(Boolean);
     }
 
+    function browseGenrePairs() {
+      const names = [browseState.persons, ...browseState.tags].filter(Boolean);
+      return names.map(name => ({ id: genreIdByName(name, browseState.format), name }));
+    }
+
     async function loadBrowse() {
       if (!ensureConfig()) return;
       browseState.loaded = true;
       browseState.keyword = $('browseKeyword').value.trim();
       const offset = (browseState.page - 1) * 20 + 1;
-      const keyword = browseKeywordParts().join(' ');
+      const genrePairs = browseGenrePairs();
+      const keywordParts = [
+        $('browseKeyword').value.trim(),
+        ...browseState.makers,
+        browseState.format === 'vr' ? 'VR' : ''
+      ].filter(Boolean);
+      const keyword = keywordParts.join(' ');
       const baseParams = applyFormatParams({
         service: 'digital',
-        hits: browseState.format === 'vr' ? 20 : 40,
+        hits: 40,
         offset,
         sort: browseState.mode === 'ranking' ? 'rank' : 'date',
         keyword
@@ -1270,20 +1389,41 @@
       $('browseResults').innerHTML = '';
       $('browseTitle').textContent = `${browseState.mode === 'ranking' ? '人気順' : '新着'} / ${browseState.format === 'vr' ? 'VR' : '2D'} / ${browseState.page}ページ`;
       try {
-        const json = await dmmGet('ItemList', baseParams);
-        let items = normalizeItems(json);
+        let items = [];
+        const effectiveGenrePairs = genrePairs.filter(g => g.id);
+        if (effectiveGenrePairs.length) {
+          const results = await Promise.all(effectiveGenrePairs.slice(0, 3).map(g => {
+            const params = { ...baseParams, genre_id: g.id };
+            if (browseState.format === 'vr') params.keyword = [keyword, 'VR'].filter(Boolean).join(' ');
+            return dmmGet('ItemList', params);
+          }));
+          items = uniqueItems(results.flatMap(normalizeItems));
+        } else {
+          const json = await dmmGet('ItemList', baseParams);
+          items = normalizeItems(json);
+        }
         items = filterByFormat(items, browseState.format);
-        if (browseState.mode === 'new') items = sortByDateDesc(items);
+        items = applyStrictFilters(items, {
+          genrePairs: effectiveGenrePairs,
+          requiredGenreNames: genrePairs.filter(g => !g.id).map(g => g.name),
+          requiredKeywords: [...browseState.makers]
+        });
+        if (browseState.mode === 'new') items = sortByDateDesc(filterFutureItems(items));
         items = items.slice(0, 20);
         renderCards('browseResults', items);
         $('browseStatus').className = 'empty';
         $('browseStatus').textContent = items.length ? `${items.length}件表示しています。` : '該当作品が見つかりませんでした。';
-        $('prevPage').disabled = browseState.page <= 1;
-        $('nextPage').disabled = items.length < 20;
+        setPaginationDisabled(items.length);
       } catch (err) {
         $('browseStatus').className = 'error';
         $('browseStatus').textContent = '読み込みに失敗しました。' + err.message;
+        setPaginationDisabled(0);
       }
+    }
+
+    function setPaginationDisabled(itemsLength) {
+      document.querySelectorAll('.page-prev').forEach(btn => { btn.disabled = browseState.page <= 1; });
+      document.querySelectorAll('.page-next').forEach(btn => { btn.disabled = itemsLength < 20; });
     }
 
     function normalizeItems(json) {
@@ -1385,10 +1525,12 @@
       const series = itemSeries(item);
       const price = itemPrice(item);
       const contentId = item.content_id || item.product_id || '';
+      lightboxImages = [...new Set([img, ...samples].filter(Boolean))];
+      lightboxIndex = 0;
       $('detailContent').innerHTML = `
         <div class="detail-layout">
           <div>
-            ${img ? `<img class="detail-main-img" src="${escapeHtml(img)}" alt="${escapeHtml(item.title || '')}" data-expand-src="${escapeHtml(img)}">` : ''}
+            ${img ? `<img class="detail-main-img" src="${escapeHtml(img)}" alt="${escapeHtml(item.title || '')}" data-lightbox-index="0" data-expand-src="${escapeHtml(img)}">` : ''}
             <div class="detail-tags">
               ${genres.slice(0, 12).map(name => `<span class="detail-tag">${escapeHtml(name)}</span>`).join('')}
             </div>
@@ -1407,26 +1549,59 @@
             <div class="modal-actions" style="justify-content:flex-start;">
               <a class="primary" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">作品ページを見る</a>
             </div>
-            ${samples.length ? `<div class="sample-grid">${samples.map(src => `<img src="${escapeHtml(src)}" alt="サンプル画像" loading="lazy" data-expand-src="${escapeHtml(src)}">`).join('')}</div>` : ''}
+            ${samples.length ? `<div class="sample-grid">${samples.map((src, i) => `<img src="${escapeHtml(src)}" alt="サンプル画像" loading="lazy" data-lightbox-index="${img ? i + 1 : i}" data-expand-src="${escapeHtml(src)}">`).join('')}</div>` : ''}
           </div>
         </div>`;
       $('detailModal').classList.add('active');
     }
 
     function closeDetailModal() {
+      closeLightbox();
       $('detailModal').classList.remove('active');
       $('detailContent').innerHTML = '';
+      lightboxImages = [];
+      lightboxIndex = 0;
     }
 
     function handleDetailImageClick(e) {
       const img = e.target.closest('[data-expand-src]');
       if (!img) return;
-      openLightbox(img.dataset.expandSrc || img.src);
+      const src = img.dataset.expandSrc || img.src;
+      const index = Number(img.dataset.lightboxIndex);
+      openLightbox(Number.isFinite(index) ? index : lightboxImages.indexOf(src));
     }
 
-    function openLightbox(src) {
-      $('lightboxImg').src = src;
+    function openLightbox(indexOrSrc = 0) {
+      if (!lightboxImages.length) return;
+      if (typeof indexOrSrc === 'string') {
+        const found = lightboxImages.indexOf(indexOrSrc);
+        lightboxIndex = found >= 0 ? found : 0;
+      } else {
+        lightboxIndex = Math.max(0, Math.min(lightboxImages.length - 1, indexOrSrc));
+      }
+      renderLightbox();
       $('imageLightbox').classList.add('active');
+    }
+
+    function renderLightbox() {
+      const src = lightboxImages[lightboxIndex];
+      $('lightboxImg').src = src || '';
+      $('lightboxCounter').textContent = lightboxImages.length > 1 ? (lightboxIndex + 1) + ' / ' + lightboxImages.length : '';
+      $('lightboxPrev').disabled = lightboxImages.length <= 1;
+      $('lightboxNext').disabled = lightboxImages.length <= 1;
+    }
+
+    function moveLightbox(delta) {
+      if (!lightboxImages.length) return;
+      lightboxIndex = (lightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
+      renderLightbox();
+    }
+
+    function handleLightboxKey(e) {
+      if (!$('imageLightbox').classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') moveLightbox(-1);
+      if (e.key === 'ArrowRight') moveLightbox(1);
+      if (e.key === 'Escape') closeLightbox();
     }
 
     function closeLightbox() {
